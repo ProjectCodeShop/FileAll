@@ -1,0 +1,2182 @@
+# MagicAlay Hub - รวมตัวแปรทั้งหมดไว้ไฟล์เดียว
+
+รวม 5 ไฟล์สรุปเดิม + ตัวแปรเพิ่มเติมที่ดึงใหม่จากสคริปต์ที่ถอดแล้ว (locals 463 ตัว, ฟังก์ชัน 126 ตัว, ข้อความ UI, ชื่อ Instance, สี, ตัวเลข, remote, ตัวแปร _G)
+
+## สารบัญ
+0. ภาพรวมไฟล์และข้อควรระวัง
+1. ไฟล์ A: สคริปต์ VM (LuaObfuscator.com)
+2. ไฟล์ B: abacktools (string.char)
+3. ไฟล์ C: Bundle MagicAlay Hub (message_7 / message_12)
+4. ไฟล์ D: WeAreDevs obfuscator
+5. ไฟล์ E: Luraph (Lib_5_5_0)
+6. ตารางเทียบข้ามไฟล์
+
+## 0. ภาพรวมไฟล์และข้อควรระวัง
+
+| กลุ่ม | ไฟล์ที่อัปโหลด | obfuscator | สถานะการถอด |
+|---|---|---|---|
+| A | ไฟล์แรก (obf_...lua.txt) | LuaObfuscator.com Alpha 0.10.9 (VM) | อ่านไบต์โค้ดได้ ได้ค่าคงที่ทั้งหมด ลอจิกกู้จาก B |
+| B | abacktools-obfuscated.lua | string.char + เปลี่ยนชื่อตัวแปร | ถอดครบ 100% |
+| C | message_7_deobfuscated.lua, message__12_/__14___1_, message__8_, __9_/__10_/__11_/__15_ | ชั้นสตริงเข้ารหัส (ต้นฉบับ __8_/__9_) | __12_ และ _7_ ถอดมาให้แล้ว |
+| D | obfuscated_script-1791570804973_lua.txt | WeAreDevs v1.0.0 (VM) | ถอดสตริงได้ 123/940 ลอจิกยังไม่ได้ |
+| E | Lib_5_5_0.lua | Luraph v15.1 | ถอดไม่ได้ |
+
+**ข้อควรระวัง**
+- กลุ่ม A, B, C เป็นสคริปต์โกงเกม (Blox Fruits ฟาร์ม/ตีผู้เล่น, ฮับหลายเกมที่มี aimbot/ESP/KillAll) เสี่ยงโดนแบน
+- กลุ่ม C เวอร์ชัน __12_/__14_ มี **webhook Discord** ส่งชื่อผู้เล่น, DisplayName, รูปโปรไฟล์ และจำนวนครั้งที่รัน (เก็บใน MagicAlay_TrackingCache.json) ไปให้ผู้เขียน (ในไฟล์นี้ไม่ได้ใส่ URL ของ webhook)
+- ระบบคีย์ของกลุ่ม C ตรวจในเครื่อง ไม่ต่อเซิร์ฟเวอร์ (คีย์ `MagicAlay` หรือ `admin`)
+- กลุ่ม B ไม่มี webhook/HttpGet แต่ไฟล์ obfuscate มีบั๊ก `local _i=_c._i` (เปลี่ยนชื่อ LocalPlayer ผิด) ทำให้ error ตั้งแต่บรรทัดแรก
+
+---
+## 1. ไฟล์ A: สคริปต์ VM (LuaObfuscator.com)
+
+
+หมายเหตุ: ชื่อตัวแปรต้นฉบับ (local) หายไปตอน obfuscate ไฟล์นี้รวม 'ชื่อ/ค่าคงที่' ที่กู้ได้ทั้งหมด
+
+### 1.1) ตัวแปรของ interpreter (v0-v29)
+
+- `v0, v14` = tonumber
+- `v1` = string.byte
+- `v2` = string.char
+- `v3` = string.sub
+- `v4` = string.gsub
+- `v5` = string.rep
+- `v6` = table.concat
+- `v7` = table.insert
+- `v8` = math.ldexp
+- `v9` = getfenv หรือ _ENV
+- `v10` = setmetatable
+- `v11` = pcall
+- `v12` = select
+- `v13` = unpack / table.unpack
+- `v15` = ถอดรหัสไบต์โค้ดแล้วรัน VM
+- `v16` = สตริงไบต์โค้ด (หลังตัด 'LOL!')
+- `v18` = ตำแหน่งอ่านปัจจุบัน
+- `v20` = ดึงบิตจากตัวเลข
+- `v21` = อ่าน 1 byte
+- `v22` = อ่าน 2 byte
+- `v23` = อ่าน 4 byte
+- `v24` = อ่าน double
+- `v25` = อ่าน string
+- `v27` = pack (...) -> {...}, count
+- `v28` = อ่านฟังก์ชัน (proto) 1 ตัว
+- `v29` = แปลง proto เป็นฟังก์ชันที่รันได้
+
+### 1.2) สตริงที่ถูกเข้ารหัส (ถอดแล้ว) ใน main - ตัวเลข = ลำดับ slot
+
+- [1] `ReplicatedStorage`
+- [3] `CoreGui`
+- [5] `Players`
+- [7] `TweenService`
+- [9] `Lighting`
+- [11] `UserInputService`
+- [13] `RunService`
+- [15] `Workspace`
+- [19] `PlayerGui`
+- [22] `MagicAlay_IOS_Sidebar_GUI`
+- [24] `ScreenGui`
+- [26] `MagicAlay_IOS_Sidebar_GUI`
+- [29] `gethui`
+- [35] `UIBlurEffect`
+- [37] `BlurEffect`
+- [39] `UIBlurEffect`
+- [49] `FieldOfView`
+- [57] `Size`
+- [65] `FieldOfView`
+- [73] `Size`
+- [77] `Frame`
+- [79] `MainFrame`
+- [91] `UICorner`
+- [95] `UIStroke`
+- [101] `TextButton`
+- [103] `DragHeader`
+- [114] `TextLabel`
+- [118] `MagicAlay`
+- [131] `TextLabel`
+- [137] `Safe High Center + Rapid Jitter + Mob Pull`
+- [189] `ScrollingFrame`
+- [191] `TabButtonContainer`
+- [207] `UICorner`
+- [211] `UIListLayout`
+- [227] `Folder`
+- [229] `PagesFolder`
+- [232] `TextButton`
+- [234] `TabBtn`
+- [246] `UICorner`
+- [250] `ImageLabel`
+- [262] `TextLabel`
+- [280] `ScrollingFrame`
+- [282] `Page`
+- [297] `UIListLayout`
+- [305] `BackgroundTransparency`
+- [309] `ImageColor3`
+- [315] `ImageColor3`
+- [321] `TextColor3`
+- [329] `BackgroundTransparency`
+- [334] `TextColor3`
+- [340] `Button`
+- [341] `Icon`
+- [342] `Label`
+- [343] `Page`
+- [347] `TextLabel`
+- [357] `UICorner`
+- [361] `Frame`
+- [367] `UICorner`
+- [371] `UIStroke`
+- [377] `Frame`
+- [389] `UICorner`
+- [406] `BackgroundColor3`
+- [411] `Position`
+- [416] `BackgroundColor3`
+- [421] `Position`
+- [425] `TextButton`
+- [433] `Auto Farm`
+- [434] `All Weapons`
+- [436] `Modules`
+- [439] `Net`
+- [449] `UIListLayout`
+- [456] `Frame`
+- [475] `UICorner`
+- [479] `UIStroke`
+- [485] `TextLabel`
+- [487] `TextButton`
+- [494] `  `
+- [506] `UICorner`
+- [513] `Size`
+- [519] `_G_SelectedWeapon`
+- [521] `: `
+- [522] `_G_SelectedWeapon`
+- [525] `TextButton`
+- [527] `All Weapons`
+- [532] `Tool`
+- [540] `Tool`
+- [551] `Size`
+- [557] `Size`
+- [569] `TextLabel`
+- [590] `: `
+- [591] `_G_SelectedWeapon`
+- [599] `TextButton`
+- [607] `ScrollingFrame`
+- [608] `Auto Farm Close (Safe High Center + Pull)`
+- [609] `_G_AutoFarmClose`
+- [610] `Auto Equip Weapon`
+- [611] `_G_AutoEquip`
+- [612] `Select Weapon`
+- [613] `_G_SelectedWeapon`
+- [614] `Auto Hit Range (Multi-Target AoE)`
+- [615] `_G_AutoHitRange`
+- [618] `Humanoid`
+- [620] `HumanoidRootPart`
+- [621] `_G_AutoFarmClose`
+- [622] `_G_AutoHitRange`
+- [624] `Enemies`
+- [625] `_G_AutoFarmClose`
+- [629] `Humanoid`
+- [631] `HumanoidRootPart`
+- [677] `SimulationRadius`
+- [682] `Humanoid`
+- [684] `HumanoidRootPart`
+- [690] `Head`
+- [695] `_G_AutoFarmClose`
+- [697] `54136d02`
+- [698] `_G_AutoHitRange`
+- [700] `54136d02`
+- [702] `HumanoidRootPart`
+- [704] `Humanoid`
+- [708] `_G_AutoEquip`
+- [710] `_G_SelectedWeapon`
+- [711] `All Weapons`
+- [713] `Tool`
+- [717] `Tool`
+- [725] `Tool`
+- [739] `Size`
+- [749] `Size`
+- [756] `ImageButton`
+- [758] `iOSFloatButton`
+- [774] `UICorner`
+- [778] `UIStroke`
+
+### 1.3) ค่าคงที่ปกติของ main
+
+`game`, `GetService`, `LocalPlayer`, `CurrentCamera`, `WaitForChild`, `pcall`, `Instance`, `new`, `Name`, `ResetOnSpawn`, `gethui`, `Parent`, `_G`, `syn`, `protect_gui`, 0.0, `FindFirstChild`, `Size`, `FieldOfView`, 430.0, 410.0, `UDim2`, 0.5, 2.0, `Position`, `BackgroundColor3`, `Color3`, `fromRGB`, 18.0, `BackgroundTransparency`, 0.15, `Active`, `Visible`, `ClipsDescendants`, `CornerRadius`, `UDim`, `Color`, 255.0, `Thickness`, 1.2, `Transparency`, 0.7, -16.0, 36.0, 10.0, 8.0, `Text`, ``, `AutoButtonColor`, 150.0, `Font`, `Enum`, `GothamBold`, `TextSize`, 14.0, `TextColor3`, `TextXAlignment`, `Left`, `GothamMedium`, 160.0, 185.0, `InputBegan`, `Connect`, `InputChanged`, `InputEnded`, 115.0, -62.0, 50.0, 25.0, `ScrollBarThickness`, `CanvasSize`, `AutomaticCanvasSize`, `AutomaticSize`, `Y`, `Padding`, 6.0, `FillDirection`, `Vertical`, `SortOrder`, `LayoutOrder`, `HorizontalAlignment`, `Center`, `VerticalAlignment`, `Top`, 130068439240504.0, 600.0, 200.0, `Modules`, `RE/RegisterAttack`, `RE/RegisterHit`, `RE/InputTelemetry`, `task`, `spawn`, 52.0, 12.0, -26.0, 0.2, `Image`, `rbxassetid://6023426915`, `ScaleType`, `Fit`, 1.5, `MouseButton1Click`
+
+### 1.4) ค่าคงที่แยกตามฟังก์ชัน
+
+#### main.1  (params=2, instructions=38)
+1.0, 256.0
+
+#### main.2  (params=0, instructions=35)
+0.0, 1.0, `Destroy`, `gethui`, `FindFirstChild`, 22.0
+
+#### main.3  (params=0, instructions=104)
+0.0, `Create`, `TweenInfo`, `new`, 0.3, `Enum`, `EasingStyle`, `Quart`, `EasingDirection`, `Out`, 49.0, 4.0, `Play`, 57.0, 22.0, 65.0, 73.0
+
+#### main.4  (params=1, instructions=35)
+`UserInputType`, `Enum`, `MouseButton1`, `Touch`, 0.0, `Position`, 1.0
+
+#### main.5  (params=1, instructions=49)
+`UserInputType`, `Enum`, `MouseMovement`, `Touch`, 0.0, `Position`, `UDim2`, `new`, `X`, `Scale`, `Offset`, `Y`
+
+#### main.6  (params=1, instructions=18)
+`UserInputType`, `Enum`, `MouseButton1`, `Touch`
+
+#### main.7  (params=2, instructions=225)
+`Instance`, `new`, 232.0, `Name`, 234.0, `Size`, `UDim2`, 1.0, -10.0, 0.0, 36.0, `BackgroundColor3`, `Color3`, `fromRGB`, 255.0, `BackgroundTransparency`, `Text`, ``, `AutoButtonColor`, False, `LayoutOrder`, `Parent`, 246.0, `CornerRadius`, `UDim`, 10.0, 250.0, 16.0, `Position`, 0.5, -8.0, `Image`, `rbxassetid://`, `tostring`, `ImageColor3`, 160.0, 185.0, 262.0, -32.0, 30.0, `Font`, `Enum`, `GothamMedium`, `TextSize`, 11.0, `TextColor3`, `TextXAlignment`, `Left`, 280.0, 282.0, -145.0, -62.0, 135.0, 50.0, `ScrollBarThickness`, 2.0, `CanvasSize`, `AutomaticCanvasSize`, `AutomaticSize`, `Y`, `Visible`, 297.0, `Padding`, 8.0, `HorizontalAlignment`, `Center`, `MouseButton1Click`, `Connect`, `table`, `insert`, 340.0, 341.0, 342.0, 343.0
+
+#### main.7.1  (params=0, instructions=138)
+0.0, 1.0, `Create`, `TweenInfo`, `new`, 0.25, 305.0, 0.82, `Play`, 309.0, `Color3`, `fromRGB`, 255.0, 2.0, `pairs`, `Icon`, 315.0, 160.0, 185.0, `Label`, 321.0, `Page`, `Visible`, False, `Button`, 329.0, True, 334.0
+
+#### main.8  (params=4, instructions=271)
+0.0, 2.0, `Thickness`, 1.0, `Transparency`, 0.85, `Instance`, `new`, 347.0, `Size`, `UDim2`, -60.0, `Position`, 12.0, 3.0, 5.0, `BackgroundColor3`, `Color3`, `fromRGB`, 52.0, 199.0, 123.0, 60.0, 75.0, `Parent`, 357.0, `CornerRadius`, `UDim`, 361.0, 18.0, 6.0, `Color`, 255.0, 367.0, 371.0, `AutoButtonColor`, False, 4.0, `BackgroundTransparency`, 377.0, 40.0, 22.0, -48.0, 0.5, -11.0, -20.0, -9.0, 389.0, 7.0, `Text`, `Font`, `Enum`, `GothamBold`, `TextXAlignment`, `Left`, `TextSize`, 11.0, `TextColor3`, `MouseButton1Click`, `Connect`, 425.0, -10.0, 42.0, 0.92, ``
+
+#### main.8.1  (params=0, instructions=132)
+0.0, 1.0, `Create`, `TweenInfo`, `new`, 0.2, 406.0, `Color3`, `fromRGB`, 52.0, 199.0, 123.0, `Play`, 411.0, `UDim2`, -20.0, 0.5, -9.0, 416.0, 60.0, 75.0, 421.0, 2.0
+
+#### main.9  (params=3, instructions=265)
+0.0, 7.0, `Visible`, False, `Parent`, `Instance`, `new`, 449.0, `Padding`, `UDim`, 4.0, `HorizontalAlignment`, `Enum`, `Center`, 8.0, 456.0, `Size`, `UDim2`, 1.0, -10.0, 42.0, `BackgroundColor3`, `Color3`, `fromRGB`, 255.0, `BackgroundTransparency`, 0.92, `ClipsDescendants`, True, `Text`, `â¼`, `Font`, `GothamBold`, `TextSize`, 10.0, `TextColor3`, 160.0, 185.0, 5.0, 475.0, `CornerRadius`, 12.0, 479.0, `Color`, `Thickness`, `Transparency`, 0.85, 485.0, 2.0, `MouseButton1Click`, `Connect`, 3.0, `TextXAlignment`, `Left`, 569.0, 30.0, `Position`, -35.0, 6.0, -16.0, 120.0, 44.0, `ScrollBarThickness`, `CanvasSize`, `AutomaticCanvasSize`, `AutomaticSize`, `Y`, -40.0, 590.0, `_G`, 591.0, 11.0, 599.0, ``, 607.0
+
+#### main.9.1  (params=0, instructions=182)
+0.0, 2.0, `ipairs`, `Instance`, `new`, 487.0, `Size`, `UDim2`, 1.0, 28.0, `BackgroundColor3`, `Color3`, `fromRGB`, 40.0, 55.0, `BackgroundTransparency`, 0.3, `Text`, 494.0, `Font`, `Enum`, `GothamMedium`, `TextSize`, 10.0, `TextColor3`, 220.0, 240.0, `TextXAlignment`, `Left`, `Parent`, 506.0, `CornerRadius`, `UDim`, 6.0, `MouseButton1Click`, `Connect`, `pairs`, `GetChildren`, `IsA`, 525.0, `Destroy`, 527.0, `Character`, 532.0, `table`, `find`, `Name`, `insert`, `Backpack`, 540.0
+
+#### main.9.1.1  (params=0, instructions=69)
+0.0, 1.0, `Create`, `TweenInfo`, `new`, 0.2, 513.0, `UDim2`, -10.0, 42.0, `Play`, 2.0, `Visible`, False, `Text`, `â¼`, 3.0, `_G`, 519.0, 521.0, 522.0
+
+#### main.9.2  (params=0, instructions=85)
+0.0, 1.0, `Text`, `â²`, `Create`, `TweenInfo`, `new`, 0.2, 551.0, `UDim2`, -10.0, 170.0, `Play`, `Visible`, True, 557.0, 42.0, False, `â¼`
+
+#### main.10  (params=1, instructions=23)
+0.0, 1.0, `_G`, 609.0
+
+#### main.11  (params=1, instructions=5)
+`_G`, 611.0
+
+#### main.12  (params=1, instructions=5)
+`_G`, 613.0
+
+#### main.13  (params=1, instructions=5)
+`_G`, 615.0
+
+#### main.14  (params=0, instructions=23)
+0.0, `pcall`, `task`, `wait`
+
+#### main.14.1  (params=0, instructions=676)
+0.0, 1.0, `FindFirstChild`, 618.0, 620.0, 2.0, 3.0, `_G`, 621.0, 622.0, 624.0, 625.0, `math`, `huge`, `pairs`, `GetChildren`, 629.0, 631.0, `Health`, `Position`, `Magnitude`, `Y`, `Vector3`, `new`, `X`, 18.0, `Z`, -1000.0, `tick`, 35.0, `sin`, 1.8, `cos`, 1.3, `CFrame`, `Velocity`, `AssemblyLinearVelocity`, 14.0, `AssemblyAngularVelocity`, True, `pcall`, 682.0, 684.0, `FireServer`, 0.4000000059604645, 0.36666667461395264, -8.0, 118852.0, 118953.0, 690.0, 695.0, 220.0, 697.0, 698.0, 700.0, 702.0, 704.0, `Character`, `task`, `wait`, 708.0, 710.0, 711.0, `FindFirstChildOfClass`, 713.0, `Backpack`, `IsA`, 717.0, `EquipTool`, `_G_SelectedWeapon`, 725.0, `Name`
+
+#### main.14.1.1  (params=0, instructions=28)
+0.0, `CanCollide`, False, `sethiddenproperty`, 677.0, `math`, `huge`
+
+#### main.15  (params=0, instructions=122)
+0.0, 1.0, `Visible`, True, `Size`, `UDim2`, `new`, `Create`, `TweenInfo`, 0.4, `Enum`, `EasingStyle`, `Back`, `EasingDirection`, `Out`, 739.0, `Play`, `FieldOfView`, 0.3, `Quart`, 749.0, `Completed`, `Connect`
+
+#### main.15.1  (params=0, instructions=6)
+`Visible`, False
+
+#### main.16  (params=1, instructions=34)
+`UserInputType`, `Enum`, `MouseButton1`, `Touch`, 0.0, 1.0, 2.0, `Position`
+
+#### main.17  (params=1, instructions=65)
+`UserInputType`, `Enum`, `MouseMovement`, `Touch`, 0.0, `Position`, `Magnitude`, 6.0, `UDim2`, `new`, `X`, `Scale`, `Offset`, `Y`
+
+#### main.18  (params=1, instructions=18)
+`UserInputType`, `Enum`, `MouseButton1`, `Touch`
+
+#### main.19  (params=0, instructions=6)
+(ไม่มี)
+
+### 1.5) ตัวแปร _G (flag ของฟีเจอร์)
+
+- `_G_SelectedWeapon` = อาวุธที่เลือก
+- `_G_AutoEquip` = สวมอาวุธอัตโนมัติ
+- `_G_AutoFarmClose` = ฟาร์มใกล้มอน (ลอยสูง+ดึงมอน)
+- `_G_AutoHitRange` = ตีหลายเป้าหมายในระยะ
+
+### 1.6) Remote / ค่าอื่นที่สำคัญ
+- `RE/RegisterAttack`, `RE/RegisterHit`, `RE/InputTelemetry` (ใน Modules/Net)
+- `54136d02` (น่าจะเป็นรหัสที่ส่งกับ RegisterHit)
+- `rbxassetid://6023426915` (ไอคอน), `sethiddenproperty(SimulationRadius)`
+
+### 1.7 บทบาทของแต่ละฟังก์ชันใน VM (อนุมานจากค่าคงที่ + เทียบกับไฟล์ B)
+
+| proto | บทบาท (อนุมาน) | เทียบกับไฟล์ B |
+|---|---|---|
+| main.1 | ฟังก์ชันถอดรหัสสตริง (รับ 2 พารามิเตอร์: ข้อความ, คีย์) XOR | - |
+| main.2 | ลบ GUI เก่า (Destroy, gethui, FindFirstChild) | oldGui pcall |
+| main.3 | ตัวช่วย tween (Quart, Out, Play) | TweenService:Create |
+| main.4/5/6 | ลากหน้าต่าง: เริ่ม / ขยับ / จบ (MouseButton1/Touch/MouseMovement) | dragHeader.InputBegan/Changed/Ended |
+| main.7 (+7.1) | createTab + selectTab (ImageLabel, TextLabel, ScrollingFrame) | createTab / selectTab |
+| main.8 (+8.1) | createToggle (4 พารามิเตอร์) + แอนิเมชันกด | createToggle |
+| main.9 (+9.1, 9.1.1, 9.2) | dropdown เลือกอาวุธ + refresh + เปิด/ปิด (▼ ▲) | createWeaponDropdown / refreshOptions |
+| main.10-13 | callback ตั้งค่า _G ของ 4 สวิตช์ | autoFarmClose/autoEquip/selectedWeapon/autoHitRange |
+| main.14 (+14.1, 14.1.1) | ลูปหลัก pcall+task.wait: ฟาร์ม/ตี/equip; 14.1.1 ดึงมอน (CanCollide, SimulationRadius) | task.spawn loop |
+| main.15 (+15.1) | toggleMenu (Back, FieldOfView, Completed) | toggleMenu |
+| main.16-18 | ลากปุ่มลอย: เริ่ม/ขยับ/จบ | floatButton drag |
+| main.19 | ฟังก์ชันว่าง | - |
+
+---
+## 2. ไฟล์ B: abacktools (string.char + เปลี่ยนชื่อตัวแปร)
+
+ไฟล์นี้คือซอร์สของไฟล์ A ในรูปแบบที่ใช้ตัวแปรโลคัลแทน _G ชื่อเดิมทั้งหมดถูกเปลี่ยนเป็น `_a`, `_b`, ... ตารางด้านล่างเป็นการแมปทั้งหมด
+
+### 2.1 แมปชื่อตัวแปรทั้งหมด (ชื่อเดิม -> ชื่อใหม่)
+
+| ชื่อเดิม | ชื่อใหม่ | ความหมาย | นิยามในโค้ด |
+|---|---|---|---|
+| `_a` | `ReplicatedStorage` | service เก็บ Modules/Net | `game:GetService("ReplicatedStorage")` |
+| `_b` | `CoreGui` | service ที่ซ่อน GUI (สำรอง) | `game:GetService("CoreGui")` |
+| `_c` | `Players` | service รายชื่อผู้เล่น | `game:GetService("Players")` |
+| `_d` | `TweenService` | ทำแอนิเมชัน | `game:GetService("TweenService")` |
+| `_e` | `Lighting` | เก็บ BlurEffect | `game:GetService("Lighting")` |
+| `_f` | `UserInputService` | รับ input เมาส์/สัมผัส | `game:GetService("UserInputService")` |
+| `_g` | `RunService` | (ประกาศไว้แต่ไม่ได้ใช้) | `game:GetService("RunService")` |
+| `_h` | `Workspace` | โลกเกม (Enemies อยู่ที่นี่) | `game:GetService("Workspace")` |
+| `_i` | `LocalPlayer` | ผู้เล่นของเรา | `Players.LocalPlayer` |
+| `_j` | `Camera` | กล้อง | `Workspace.CurrentCamera` |
+| `_k` | `PlayerGui` | GUI ของผู้เล่น (ที่สำรอง) | `LocalPlayer:WaitForChild("PlayerGui")` |
+| `_l` | `guiParent` | ที่ใส่ GUI (gethui หรือ CoreGui) | `(gethui and gethui()) or CoreGui` |
+| `_m` | `oldGui` | GUI เก่าที่จะลบก่อนสร้างใหม่ | `guiParent:FindFirstChild("MagicAlay_IOS_Sidebar_GUI")` |
+| `_n` | `screenGui` | ScreenGui หลัก | `Instance.new("ScreenGui")` |
+| `_o` | `blur` | เอฟเฟกต์เบลอ | `Lighting:FindFirstChild("UIBlurEffect") or Instance.new("BlurEffect")` |
+| `_p` | `baseFOV` | FOV เดิม | `Camera.FieldOfView` |
+| `_q` | `menuOpen` | สถานะเมนูเปิด | `false` |
+| `_r` | `updateBlurAndFOV` | ปรับเบลอ+FOV | `function()` |
+| `_s` | `menuWidth` | กว้างเมนู | `430` |
+| `_t` | `menuHeight` | สูงเมนู | `430` |
+| `_u` | `centerPos` | ตำแหน่งกลางจอ | `UDim2.new(0.5, - menuWidth / 2, 0.5, - menuHeight / 2)` |
+| `_v` | `mainFrame` | เฟรมเมนูหลัก | `Instance.new("Frame")` |
+| `_w` | `mainStroke` | ขอบเมนู | `Instance.new("UIStroke", mainFrame)` |
+| `_x` | `dragHeader` | แถบลากเมนู | `Instance.new("TextButton")` |
+| `_y` | `titleLabel` | ข้อความ MagicAlay | `Instance.new("TextLabel")` |
+| `_z` | `subtitleLabel` | ข้อความรอง | `Instance.new("TextLabel")` |
+| `_A` | `dragging` | กำลังลากเมนู | `false` |
+| `_B` | `dragInput` | input ที่ใช้ลาก | `` |
+| `_C` | `dragStart` | จุดเริ่มลาก | `` |
+| `_D` | `startPos` | ตำแหน่งเมนูตอนเริ่มลาก | `` |
+| `_E` | `input` | InputObject | `` |
+| `_F` | `delta` | ระยะที่ลากไป | `input.Position - dragStart` |
+| `_H` | `tabContainer` | แถบแท็บซ้าย | `Instance.new("ScrollingFrame")` |
+| `_I` | `tabLayout` | UIListLayout ของแท็บ | `Instance.new("UIListLayout", tabContainer)` |
+| `_J` | `pagesFolder` | โฟลเดอร์หน้า | `Instance.new("Folder")` |
+| `_K` | `tabs` | รายการแท็บ | `{}` |
+| `_L` | `firstTab` | ธงแท็บแรก | `true` |
+| `_M` | `tabOrder` | ลำดับแท็บ | `1` |
+| `_N` | `createTab` | สร้างแท็บ+หน้า | `function(tabName, iconId)` |
+| `_O` | `tabName` | ชื่อแท็บ | `` |
+| `_P` | `iconId` | asset id ไอคอน | `` |
+| `_Q` | `tabButton` | ปุ่มแท็บ | `Instance.new("TextButton")` |
+| `_R` | `tabIcon` | ไอคอนแท็บ | `Instance.new("ImageLabel")` |
+| `_S` | `tabLabel` | ชื่อแท็บ | `Instance.new("TextLabel")` |
+| `_T` | `page` | หน้าของแท็บ | `Instance.new("ScrollingFrame")` |
+| `_U` | `pageLayout` | layout ในหน้า | `Instance.new("UIListLayout", page)` |
+| `_V` | `selectTab` | เลือกแท็บ | `function()` |
+| `_W` | `_` | ตัวแปรทิ้งใน loop | `` |
+| `_X` | `tabEntry` | รายการแท็บใน loop | `` |
+| `_Y` | `createToggle` | สร้างสวิตช์ | `function(parent, text, default, callback)` |
+| `_Z` | `parent` | parent ของ UI | `` |
+| `_aa` | `text` | ข้อความ | `` |
+| `_ba` | `default` | ค่าเริ่มต้นสวิตช์ | `` |
+| `_ca` | `callback` | ฟังก์ชันเรียกกลับ | `` |
+| `_da` | `toggleButton` | ปุ่มสวิตช์ | `Instance.new("TextButton")` |
+| `_ea` | `toggleStroke` | ขอบสวิตช์ | `Instance.new("UIStroke", toggleButton)` |
+| `_fa` | `label` | ข้อความ | `Instance.new("TextLabel")` |
+| `_ga` | `track` | ราง (เขียว=เปิด) | `Instance.new("Frame")` |
+| `_ha` | `knob` | ลูกบิด | `Instance.new("Frame")` |
+| `_ia` | `state` | สถานะสวิตช์ | `default` |
+| `_ja` | `farmPage` | หน้า Auto Farm | `createTab("Auto Farm", 130068439240504)` |
+| `_ka` | `autoFarmClose` | ฟาร์มใกล้มอน | `false` |
+| `_la` | `autoEquip` | สวมอาวุธ | `false` |
+| `_ma` | `selectedWeapon` | อาวุธที่เลือก | `"All Weapons"` |
+| `_na` | `selectedMob` | มอนที่เลือก | `"Bandit"` |
+| `_oa` | `autoHitRange` | ตีเป็นวง | `false` |
+| `_pa` | `hitRange` | ระยะตี 300 | `300` |
+| `_qa` | `farmCenter` | จุดฟาร์ม | `Vector3.new(1062.72, 14.53, 1585.12)` |
+| `_ra` | `netFolder` | Modules.Net | `ReplicatedStorage:WaitForChild("Modules", 5) and ReplicatedStorage.Mod` |
+| `_sa` | `registerAttack` | remote โจมตี | `netFolder and netFolder:FindFirstChild("RE/RegisterAttack")` |
+| `_ta` | `registerHit` | remote ตีโดน | `netFolder and netFolder:FindFirstChild("RE/RegisterHit")` |
+| `_ua` | `createWeaponDropdown` | ดรอปดาวน์อาวุธ | `function(parent, text, callback)` |
+| `_va` | `dropdown` | กรอบดรอปดาวน์ | `Instance.new("Frame")` |
+| `_wa` | `dropdownStroke` | ขอบดรอปดาวน์ | `Instance.new("UIStroke", dropdown)` |
+| `_xa` | `arrow` | ลูกศร ▼/▲ | `Instance.new("TextLabel")` |
+| `_ya` | `dropdownButton` | ปุ่มเปิดดรอปดาวน์ | `Instance.new("TextButton")` |
+| `_za` | `optionList` | รายการตัวเลือก | `Instance.new("ScrollingFrame")` |
+| `_Aa` | `optionLayout` | layout รายการ | `Instance.new("UIListLayout", optionList)` |
+| `_Ba` | `isOpen` | ดรอปดาวน์เปิดอยู่ | `false` |
+| `_Ca` | `refreshOptions` | รีเฟรชตัวเลือก | `function()` |
+| `_Da` | `oldOption` | ปุ่มตัวเลือกเก่า | `` |
+| `_Ea` | `weaponNames` | รายชื่ออาวุธ | `{"All Weapons"}` |
+| `_Fa` | `child` | ลูก (Tool/Enemy) | `` |
+| `_Ga` | `weaponName` | ชื่ออาวุธ | `` |
+| `_Ha` | `optionButton` | ปุ่มตัวเลือก | `Instance.new("TextButton")` |
+| `_Ia` | `createMobDropdown` | ดรอปดาวน์มอน | `function(parent, text, callback)` |
+| `_Ja` | `mobNames` | รายชื่อมอน | `{"Bandit", "All Mobs"}` |
+| `_Ka` | `enemiesFolder` | Workspace.Enemies | `Workspace:FindFirstChild("Enemies")` |
+| `_La` | `mobName` | ชื่อมอน | `` |
+| `_Ma` | `value` | ค่าสวิตช์ | `` |
+| `_Na` | `choice` | ตัวเลือกที่กด | `` |
+| `_Oa` | `character` | ตัวละคร | `LocalPlayer.Character` |
+| `_Pa` | `humanoid` | Humanoid ของเรา | `character:FindFirstChild("Humanoid")` |
+| `_Qa` | `rootPart` | HumanoidRootPart ของเรา | `character:FindFirstChild("HumanoidRootPart")` |
+| `_Ra` | `backpack` | กระเป๋า | `LocalPlayer:FindFirstChild("Backpack")` |
+| `_Sa` | `backpackTool` | Tool ในกระเป๋า | `` |
+| `_Ta` | `weaponTool` | อาวุธที่หา | `character:FindFirstChild(selectedWeapon) or (LocalPlayer:FindFirstChil` |
+| `_Ua` | `wave` | tick()*35 ใช้แกว่ง | `tick() * 35` |
+| `_Va` | `offsetX` | แกว่งแกน X ±1.5 | `math.sin(wave) * 1.5` |
+| `_Wa` | `offsetZ` | แกว่งแกน Z ±1.5 | `math.cos(wave * 1.3) * 1.5` |
+| `_Xa` | `hoverPos` | ตำแหน่งลอย (สูง +14) | `Vector3.new(farmCenter.X + offsetX, farmCenter.Y + 14, farmCenter.Z +` |
+| `_Ya` | `centerCFrame` | CFrame จุดฟาร์ม | `CFrame.new(farmCenter.X, farmCenter.Y, farmCenter.Z)` |
+| `_Za` | `mobHumanoid` | Humanoid มอน | `child:FindFirstChild("Humanoid")` |
+| `_ab` | `mobRoot` | Root มอน | `child:FindFirstChild("HumanoidRootPart")` |
+| `_bb` | `isTarget` | เป็นเป้าหมายไหม | `(selectedMob == "All Mobs" or child.Name == selectedMob)` |
+| `_cb` | `mobHead` | หัวมอน | `child:FindFirstChild("Head")` |
+| `_db` | `distance` | ระยะห่าง | `(rootPart.Position - mobRoot.Position).Magnitude` |
+| `_eb` | `otherPlayer` | ผู้เล่นอื่น | `` |
+| `_fb` | `otherChar` | ตัวละครอื่น | `otherPlayer.Character` |
+| `_gb` | `otherRoot` | Root ผู้เล่นอื่น | `otherChar:FindFirstChild("HumanoidRootPart")` |
+| `_hb` | `otherHumanoid` | Humanoid ผู้เล่นอื่น | `otherChar:FindFirstChild("Humanoid")` |
+| `_ib` | `otherHead` | หัวผู้เล่นอื่น | `otherChar:FindFirstChild("Head")` |
+| `_jb` | `toggleMenu` | เปิด/ปิดเมนู | `function()` |
+| `_kb` | `closeTween` | tween ปิดเมนู | `TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Qua` |
+| `_lb` | `floatButton` | ปุ่มลอย | `Instance.new("ImageButton")` |
+| `_mb` | `floatStroke` | ขอบปุ่มลอย | `Instance.new("UIStroke", floatButton)` |
+| `_nb` | `floatDragging` | กำลังลากปุ่มลอย | `false` |
+| `_ob` | `floatInput` | input ลากปุ่มลอย | `` |
+| `_pb` | `floatDragStart` | จุดเริ่มลากปุ่มลอย | `` |
+| `_qb` | `floatStartPos` | ตำแหน่งปุ่มตอนเริ่มลาก | `` |
+| `_rb` | `floatMoved` | ปุ่มถูกลากแล้ว(กันคลิกพลาด) | `false` |
+
+### 2.2 ค่าคงที่ของไฟล์ B
+
+- ขนาดเมนู 430x430, มุมโค้ง 22, ขอบ 1.2, FOV ลดตอนเปิดเมนู 4, เบลอ 22
+- ไอคอนแท็บ Auto Farm: `130068439240504`, ปุ่มลอย: `rbxassetid://6023426915`
+- ข้อความ UI: `MagicAlay`, `0.001s Ultra Attack + All Targets (Mobs & Players)`, `Auto Farm`, `Auto Farm Close (Central Hub + Pull)`, `Auto Equip Weapon`, `Select Mob`, `Select Weapon`, `Auto Hit Range (Multi-Target AoE)`, `All Weapons`, `Bandit`, `All Mobs`
+- ชื่อ Instance: `MagicAlay_IOS_Sidebar_GUI`, `UIBlurEffect`, `MainFrame`, `DragHeader`, `TabButtonContainer`, `PagesFolder`, `<ชื่อ>TabBtn`, `<ชื่อ>Page`, `iOSFloatButton`
+- remote: `Modules/Net/RE/RegisterAttack` (เรียก `FireServer(0.6666666865348816, 1)`), `RE/RegisterHit` (เรียก `FireServer(head, {{head, humanoid}}, nil, "54136d02")`)
+- ตัวเลขลอจิก: ระยะตี 300, แกว่ง `tick()*35` แอมพลิจูด 1.5 (Z ใช้ ×1.3), ลอยสูงกว่าจุดฟาร์ม 14, ความเร็วลูป `task.wait(0.001)`, ขั้นต่ำการลากปุ่มลอย 6px
+- พิกัดจุดฟาร์ม Vector3(1062.72, 14.53, 1585.12)
+
+---
+## 3. ไฟล์ C: Bundle MagicAlay Hub (message_7 / message_12)
+
+ฮับหลายเกมพร้อมระบบคีย์ ข้อมูลด้านล่างดึงจากเวอร์ชันถอดแล้ว (ชื่อตัวแปรใน __12_ เป็นชื่อสุ่ม ใน _7_ เป็นชื่อสั้น)
+
+### 3.1 ตัวแปรระดับบนสุด (เทียบ 7 กับ 12)
+| ความหมาย | ใน 7 | ใน 12 |
+|---|---|---|
+| ReplicatedStorage | `m` | `rmaCFQsMK` |
+| CoreGui | `A` | `GiwwaIbBQAQ` |
+| Players | `W` | `WpEsAhZH` |
+| TweenService | `p` | `yaEHMGDQ` |
+| Lighting | `P` | `mkkGjGLGxk` |
+| UserInputService | `F` | `dFVjPfXnJ` |
+| RunService | `b` | `miiTFMGsVb` |
+| Workspace | `E` | `VSULWMgIl` |
+| MarketplaceService | `C` | `NUWtBGmwAITP` |
+| SoundService | `N` | `fMrccVdkDb` |
+| HttpService | `-` | `OTIIHDks` |
+| LocalPlayer | `y` | `DbMurqdeP` |
+| CurrentCamera | `u` | `cnCQuLVL` |
+| ไฟล์เก็บคีย์ MagicAlay_SavedKey.txt | `z` | `PMpYfWsE` |
+| คีย์ 'MagicAlay' | `-` | `PbROqMExSckA` |
+| ลิงก์ Discord | `-` | `ElYwRZSzIqJC, ZsRQkHfMJDTH` |
+| URL webhook | `-` | `HQtfemZY` |
+| ไฟล์ MagicAlay_TrackingCache.json | `-` | `rMUACmiaj` |
+| ฟังก์ชันส่ง webhook | `-` | `shdwZUfoYRFJ` |
+| ฟังก์ชันนับครั้งรัน + เรียกส่ง | `-` | `yBQIyFVWpVp` |
+| ScreenGui หลัก (MagicAlay_Ultra_IOS_GUI) | `-` | `gqlKmiZcCIc` |
+| ฟังก์ชันเล่นเสียง | `-` | `zaFmgdeV` |
+| ฟังก์ชัน copy clipboard | `-` | `VHusqqkF` |
+| ตรวจคีย์ | `-` | `MgKFiyoF` |
+| ผ่านคีย์สำเร็จ | `-` | `vSssaEKx` |
+| กล่องกรอกคีย์ (TextBox) | `-` | `ULWVmJirTp` |
+
+
+### 3.2 เกมที่รองรับ (จากข้อความ UI)
+`Tycoon : Lemon Stand`, `[FPS] Gun Grounds FFA`, `City Thailand 2`, `GluePiece`, `FreeFireMax`, `Swat Simulator`, `Sell Lemons`, `Murder Duels`, `Aura Edit Arena`, `Fortline` และโหมด Blox Fruits-style (`Enemies`, `Bandit`)
+
+### 3.3 ตัวแปร _G (สวิตช์ฟีเจอร์) พร้อมจำนวนครั้งที่อ้างถึง
+
+| ตัวแปร | ความหมาย | อ้างถึง (ครั้ง) |
+|---|---|---|
+| `_G.AimPart` | ส่วนที่เล็ง | 6 |
+| `_G.AimbotSmooth` | ความนุ่ม aimbot | 2 |
+| `_G.Silent` | Silent aim | 3 |
+| `_G.Wallbang` | ยิงทะลุกำแพง | 3 |
+| `_G.AutoCam` | กล้องอัตโนมัติ | 3 |
+| `_G.SkyHunter` | ล่าจากฟ้า | 3 |
+| `_G.ESPBox` | ESP กล่อง | 3 |
+| `_G.ESPTracer` | ESP เส้น | 3 |
+| `_G.ESPHealth` | ESP เลือด | 3 |
+| `_G.Spin` | หมุนตัว | 3 |
+| `_G.SpinSpeed` | ความเร็วหมุน | 3 |
+| `_G.ZigZag` | ซิกแซก | 3 |
+| `_G.SpeedVal` | ค่าความเร็ว | 2 |
+| `_G.InfiniteJump` | กระโดดไม่จำกัด | 3 |
+| `_G.NoClip` | ทะลุกำแพง | 3 |
+| `_G.EspColor` | สี ESP | 7 |
+| `_G.__SHOTBASE` | ค่ายิงฐาน | 3 |
+| `_G.__SHOTEXTRA` | ค่ายิงเสริม | 4 |
+| `_G.__SHOOTKA_LOOP` | ธงลูปยิง | 8 |
+
+### 3.4 ตัวแปรโลคัลทั้งหมดใน __12_ (463 ตัว)
+
+| ตัวแปร | ชนิด | บรรทัดที่ประกาศ | นิยาม (ย่อ) |
+|---|---|---|---|
+| `exp` | อื่นๆ | 13 | `math.floor(math.log(math.abs(x)) / math.log(2)) + 1` |
+| `mantissa` | อื่นๆ | 14 | `x / 2 ^ exp` |
+| `thing` | ตัวเลข | 20 | `2438` |
+| `thing2` | ตัวเลข | 21 | `2438` |
+| `counter` | ตัวเลข | 22 | `0` |
+| `temp` | ตัวเลข | 25 | `4` |
+| `lmSwuScdl` | ตาราง | 27 | `{WebhookUrl="https://discord.com/api/webhooks/<ซ่อน>` |
+| `rmaCFQsMK` | Service ReplicatedStorage | 28 | `game:GetService("ReplicatedStorage")` |
+| `GiwwaIbBQAQ` | Service CoreGui | 29 | `game:GetService("CoreGui")` |
+| `WpEsAhZH` | Service Players | 30 | `game:GetService("Players")` |
+| `yaEHMGDQ` | Service TweenService | 31 | `game:GetService("TweenService")` |
+| `mkkGjGLGxk` | Service Lighting | 32 | `game:GetService("Lighting")` |
+| `dFVjPfXnJ` | Service UserInputService | 33 | `game:GetService("UserInputService")` |
+| `miiTFMGsVb` | Service RunService | 34 | `game:GetService("RunService")` |
+| `VSULWMgIl` | Service Workspace | 35 | `game:GetService("Workspace")` |
+| `NUWtBGmwAITP` | Service MarketplaceService | 36 | `game:GetService("MarketplaceService")` |
+| `fMrccVdkDb` | Service SoundService | 37 | `game:GetService("SoundService")` |
+| `OTIIHDks` | Service HttpService | 38 | `game:GetService("HttpService")` |
+| `DbMurqdeP` | อื่นๆ | 39 | `WpEsAhZH.LocalPlayer` |
+| `cnCQuLVL` | อื่นๆ | 40 | `VSULWMgIl.CurrentCamera` |
+| `PMpYfWsE` | สตริง | 41 | `"MagicAlay_SavedKey.txt"` |
+| `PbROqMExSckA` | สตริง | 42 | `"MagicAlay"` |
+| `ElYwRZSzIqJC` | สตริง | 43 | `"https://discord.gg/eWZ7yHeQr"` |
+| `ZsRQkHfMJDTH` | สตริง | 44 | `"https://discord.gg/eWZ7yHeQr"` |
+| `HQtfemZY` | อื่นๆ | 45 | `(lmSwuScdl and lmSwuScdl.WebhookUrl)or ""` |
+| `kTxJgmmG` | boolean | 46 | `true` |
+| `OLXvNmjL` | สตริง | 47 | `"rbxassetid://111174530730534"` |
+| `ttZmSKeeyS` | สตริง | 48 | `"rbxassetid://6436188054"` |
+| `FdgNbduHNhf` | สตริง | 49 | `"rbxassetid://91660275693179"` |
+| `BgpRlhkJQ` | Instance Sound | 50 | `Instance.new("Sound")` |
+| `rMUACmiaj` | สตริง | 55 | `"MagicAlay_TrackingCache.json"` |
+| `LwekbajIxyFZ` | สตริง | 56 | `""` |
+| `WCDmTsXezgX` | อื่นๆ | 57 | `pcall(function() return WpEsAhZH:GetUserThumbnailAsync(DbMurqdeP.UserI` |
+| `fKNOhnnQYPzd` | อื่นๆ | 57 | `pcall(function() return WpEsAhZH:GetUserThumbnailAsync(DbMurqdeP.UserI` |
+| `TCkRNfGF` | ตาราง | 58 | `{["embeds"]={{["title"]="MagicAlay Hub",["color"]=65280,["thumbnail"]=` |
+| `QkyjeeZzyoK` | อื่นๆ | 59 | `OTIIHDks:JSONEncode(TCkRNfGF)` |
+| `kEqqDlXVJ` | ตาราง | 60 | `{["Content-Type"]="application/json"}` |
+| `qAocsLjjhWV` | อื่นๆ | 61 | `request or(syn and syn.request)or http_request or(fluxus and fluxus.re` |
+| `VwKFhoiA` | ตาราง | 62 | `{}` |
+| `VglCXTDoLa` | อื่นๆ | 63 | `readfile(rMUACmiaj)` |
+| `kkeLDTEZ` | อื่นๆ | 64 | `OTIIHDks:JSONDecode(VglCXTDoLa)` |
+| `vjKdxhqKJA` | อื่นๆ | 66 | `tostring(DbMurqdeP.UserId)` |
+| `UIQTjNYMo` | ตัวเลข | 67 | `1` |
+| `gqlKmiZcCIc` | Instance ScreenGui | 70 | `Instance.new("ScreenGui")` |
+| `ibmjCBBrkQ` | สตริง | 73 | `"103143683174616"` |
+| `nfkjgJUvvie` | สตริง | 74 | `"9405930424"` |
+| `fsbMljUO` | สตริง | 75 | `"9405930424"` |
+| `IDShmoRDNG` | อื่นๆ | 77 | `pcall(function() return readfile(PMpYfWsE) end)` |
+| `JyZEDuGPBfR` | อื่นๆ | 77 | `pcall(function() return readfile(PMpYfWsE) end)` |
+| `mJYIJZey` | boolean | 79 | `false` |
+| `OrhrSMdVyLpT` | อื่นๆ | 80 | `` |
+| `ZXdihySEdLon` | อื่นๆ | 80 | `` |
+| `oUlHsLjMgVp` | อื่นๆ | 85 | `input.Position-OrhrSMdVyLpT` |
+| `nYUMKovKvW` | Instance UIScale | 86 | `Instance.new("UIScale")` |
+| `mGFRyMZeHJ` | Instance Frame | 88 | `Instance.new("Frame")` |
+| `ojJvSpfoliz` | Instance UIGradient | 94 | `Instance.new("UIGradient",mGFRyMZeHJ)` |
+| `qcCOURhpula` | Instance UIStroke | 95 | `Instance.new("UIStroke",mGFRyMZeHJ)` |
+| `tmbzlmQSFNL` | Instance Frame | 97 | `Instance.new("Frame")` |
+| `dmzbPNfJV` | Instance ImageLabel | 101 | `Instance.new("ImageLabel")` |
+| `MYkhJDMnwwdh` | Instance TextLabel | 106 | `Instance.new("TextLabel")` |
+| `oIsCJGrnqq` | Instance TextLabel | 112 | `Instance.new("TextLabel")` |
+| `ZFsEUWuYu` | ตาราง | 119 | `{}` |
+| `lgqxGgVcdMSS` | boolean | 120 | `false` |
+| `vCehpanp` | อื่นๆ | 122 | `table.remove(ZFsEUWuYu,1)` |
+| `uyvEmiFJjE` | อื่นๆ | 135 | `yaEHMGDQ:Create(mGFRyMZeHJ,TweenInfo.new(0.35,Enum.EasingStyle.Quart,E` |
+| `RSJeMjOdzb` | อ้างอิง Instance | 146 | `mkkGjGLGxk:FindFirstChild("UIBlurEffect")or Instance.new("BlurEffect")` |
+| `FfhiGGIhqTH` | อื่นๆ | 148 | `cnCQuLVL.FieldOfView` |
+| `smGoZQPyFwL` | boolean | 149 | `false` |
+| `oMnwaizQzWN` | อื่นๆ | 150 | `` |
+| `GNqCvfaGL` | อ้างอิง Instance | 151 | `gqlKmiZcCIc:FindFirstChild("iOSLoginModal")` |
+| `KXIITZLL` | อื่นๆ | 152 | `GNqCvfaGL~=nil and GNqCvfaGL.Visible` |
+| `BJqibWtp` | อื่นๆ | 153 | `oMnwaizQzWN and oMnwaizQzWN.Visible and oMnwaizQzWN.BackgroundTranspar` |
+| `ODIbaaKGpRuB` | Instance BindableEvent | 156 | `Instance.new("BindableEvent")` |
+| `kDoEYWJd` | Instance Frame | 157 | `Instance.new("Frame")` |
+| `HGKMnrsuq` | Instance ImageLabel | 163 | `Instance.new("ImageLabel")` |
+| `fgiLRMCIFYPK` | Instance UIStroke | 172 | `Instance.new("UIStroke",HGKMnrsuq)` |
+| `lGPTTuJYFWkg` | ตัวเลข | 185 | `420` |
+| `qZqkWDkWaSN` | ตัวเลข | 186 | `310` |
+| `PJPByNvkCIS` | ตำแหน่ง/ขนาด | 187 | `UDim2.new(0.5,-lGPTTuJYFWkg/2,0.5,-qZqkWDkWaSN/2)` |
+| `AhpNxlEwpBu` | Instance Frame | 188 | `Instance.new("Frame")` |
+| `cIoNbjyAes` | Instance UIGradient | 194 | `Instance.new("UIGradient",AhpNxlEwpBu)` |
+| `tCAlMuAeR` | Instance UIStroke | 195 | `Instance.new("UIStroke",AhpNxlEwpBu)` |
+| `YyGUdpOO` | Instance Frame | 197 | `Instance.new("Frame")` |
+| `OuvUxfurKT` | Instance UIStroke | 203 | `Instance.new("UIStroke",YyGUdpOO)` |
+| `XeEOTjpdQst` | Instance Frame | 205 | `Instance.new("Frame")` |
+| `ulBIrCoy` | Instance UIStroke | 209 | `Instance.new("UIStroke",XeEOTjpdQst)` |
+| `WQnxiEpdN` | Instance ImageLabel | 211 | `Instance.new("ImageLabel")` |
+| `gEzLSzSugqq` | Instance Frame | 215 | `Instance.new("Frame")` |
+| `mPPHkNgpdj` | Instance UIStroke | 219 | `Instance.new("UIStroke",gEzLSzSugqq)` |
+| `ULWVmJirTp` | Instance TextBox | 221 | `Instance.new("TextBox")` |
+| `ZDQjjOMfp` | Instance TextButton | 230 | `Instance.new("TextButton")` |
+| `LFPervCle` | Instance ImageLabel | 242 | `Instance.new("ImageLabel")` |
+| `xGTGNvdv` | อื่นๆ | 251 | `` |
+| `gKGqTzebEyMT` | อื่นๆ | 259 | `string.gsub(ULWVmJirTp.Text,"%s+","")` |
+| `aBBWplVf` | ตาราง | 263 | `{-8,8,-6,6,-3,3,0}` |
+| `RFMmuwOshDZk` | Instance UIStroke | 273 | `Instance.new("UIStroke",xGTGNvdv)` |
+| `AMrDLrpDZ` | Instance ImageButton | 275 | `Instance.new("ImageButton")` |
+| `SRMNSDarkdrj` | Instance Frame | 280 | `Instance.new("Frame")` |
+| `ZtnstTEbcchC` | Instance ImageButton | 284 | `Instance.new("ImageButton")` |
+| `PXcBghBdiIm` | Instance UIStroke | 295 | `Instance.new("UIStroke",oMnwaizQzWN)` |
+| `uZZBrgCvDKnF` | Instance Frame | 297 | `Instance.new("Frame")` |
+| `xqHChYQzBGKs` | Instance TextLabel | 300 | `Instance.new("TextLabel")` |
+| `agztCRloac` | boolean | 306 | `false` |
+| `FzJdVzESzuxq` | Instance ScrollingFrame | 312 | `Instance.new("ScrollingFrame")` |
+| `SvZkQIdU` | Instance UIListLayout | 319 | `Instance.new("UIListLayout",FzJdVzESzuxq)` |
+| `drvQHQbNDz` | Instance Frame | 321 | `Instance.new("Frame")` |
+| `gJZcusCHH` | Instance UIStroke | 325 | `Instance.new("UIStroke",drvQHQbNDz)` |
+| `MHWBlYQZ` | Instance ImageLabel | 327 | `Instance.new("ImageLabel")` |
+| `xeSklKePVMd` | Instance TextLabel | 331 | `Instance.new("TextLabel")` |
+| `MLnNWDDRIYNp` | Instance TextLabel | 337 | `Instance.new("TextLabel")` |
+| `JVCRZGsP` | Instance TextLabel | 343 | `Instance.new("TextLabel")` |
+| `xXerTbeBuA` | อื่นๆ | 349 | `NUWtBGmwAITP:GetProductInfo(game.PlaceId)` |
+| `dWPLPhSTEQMJ` | Instance Frame | 350 | `Instance.new("Frame")` |
+| `AqsgNsWJ` | Instance UIStroke | 357 | `Instance.new("UIStroke",dWPLPhSTEQMJ)` |
+| `sibwtrrP` | Instance TextLabel | 361 | `Instance.new("TextLabel")` |
+| `XgSjLHgObgrd` | Instance TextLabel | 372 | `Instance.new("TextLabel")` |
+| `tbwawtcPF` | Instance TextButton | 383 | `Instance.new("TextButton")` |
+| `ZSRIZRydSi` | Instance Frame | 392 | `Instance.new("Frame")` |
+| `GeIwxseOqV` | อื่นๆ | 399 | `defaultState` |
+| `EVSjfoNJA` | Instance Frame | 406 | `Instance.new("Frame")` |
+| `uRoKUlbG` | Instance TextLabel | 410 | `Instance.new("TextLabel")` |
+| `rvhrZAmp` | Instance TextLabel | 416 | `Instance.new("TextLabel")` |
+| `TnsdxzkI` | Instance Frame | 445 | `Instance.new("Frame")` |
+| `oGVpBSQTB` | Instance TextLabel | 449 | `Instance.new("TextLabel")` |
+| `YXUvLoJpDU` | Instance TextButton | 455 | `Instance.new("TextButton")` |
+| `WzHGrdJWZ` | Instance Frame | 469 | `Instance.new("Frame")` |
+| `yNWxlWhbvdU` | Instance TextLabel | 472 | `Instance.new("TextLabel")` |
+| `YyJPcZjvUkD` | Instance TextLabel | 477 | `Instance.new("TextLabel")` |
+| `dILUOguEfj` | Instance Folder | 485 | `Instance.new("Folder")` |
+| `IvNHdlUpr` | Instance Frame | 487 | `Instance.new("Frame")` |
+| `eWRooWNJRyB` | Instance UIStroke | 491 | `Instance.new("UIStroke",IvNHdlUpr)` |
+| `zoatJcuLLEO` | Instance Frame | 493 | `Instance.new("Frame")` |
+| `rAOYJohFnYvo` | Instance Frame | 498 | `Instance.new("Frame")` |
+| `LEGMKZpNiaR` | Instance UIListLayout | 501 | `Instance.new("UIListLayout",rAOYJohFnYvo)` |
+| `PLdowkMmGYP` | Instance Frame | 503 | `Instance.new("Frame")` |
+| `zPeMeSLcOUKp` | Instance ImageLabel | 507 | `Instance.new("ImageLabel")` |
+| `vhiydVJp` | อื่นๆ | 511 | `WpEsAhZH:GetUserThumbnailAsync(DbMurqdeP.UserId,Enum.ThumbnailType.Hea` |
+| `CZbDramLO` | Instance TextLabel | 512 | `Instance.new("TextLabel")` |
+| `TsBuhrTkxRb` | Instance TextLabel | 518 | `Instance.new("TextLabel")` |
+| `HhYEMrDDYqr` | Instance Frame | 524 | `Instance.new("Frame")` |
+| `GMLIKamP` | Instance Frame | 528 | `Instance.new("Frame")` |
+| `NKnVvVDfKL` | Instance TextLabel | 533 | `Instance.new("TextLabel")` |
+| `XdYYdQxQ` | Instance TextLabel | 538 | `Instance.new("TextLabel")` |
+| `SsaWZiWbncR` | Instance TextButton | 544 | `Instance.new("TextButton")` |
+| `WdjgctTW` | Instance TextButton | 549 | `Instance.new("TextButton")` |
+| `yFWqxhucIZkb` | อื่นๆ | 554 | `nil` |
+| `PsropIjnX` | สตริง | 555 | `""` |
+| `oTxjWIXgE` | อื่นๆ | 575 | `yaEHMGDQ:Create(AhpNxlEwpBu,TweenInfo.new(0.3,Enum.EasingStyle.Quart,E` |
+| `leSsFtgz` | อื่นๆ | 578 | `yFWqxhucIZkb` |
+| `xgooKOdfEt` | อื่นๆ | 579 | `PsropIjnX` |
+| `fzAzsVybR` | อื่นๆ | 583 | `yaEHMGDQ:Create(AhpNxlEwpBu,TweenInfo.new(0.3,Enum.EasingStyle.Quart,E` |
+| `bdZCXgvdS` | ตาราง | 588 | `{}` |
+| `glYeJhluPWBC` | boolean | 589 | `true` |
+| `ECRpaYrM` | Instance TextButton | 590 | `Instance.new("TextButton")` |
+| `bULHLVRs` | Instance ImageLabel | 597 | `Instance.new("ImageLabel")` |
+| `lvpcWVjumF` | Instance TextLabel | 605 | `Instance.new("TextLabel")` |
+| `JaghVOGMyS` | Instance Frame | 617 | `Instance.new("Frame")` |
+| `mXtMfRBMVoS` | Instance Frame | 634 | `Instance.new("Frame")` |
+| `xgrFUNBMvwe` | Instance TextBox | 642 | `Instance.new("TextBox")` |
+| `zsMMTbLiVpUE` | Instance ScrollingFrame | 655 | `Instance.new("ScrollingFrame")` |
+| `VWSJMByV` | Instance UIListLayout | 667 | `Instance.new("UIListLayout",zsMMTbLiVpUE)` |
+| `ITYWStywFam` | อื่นๆ | 670 | `string.lower(xgrFUNBMvwe.Text)` |
+| `wWoIkhREc` | Instance TextButton | 673 | `Instance.new("TextButton")` |
+| `clTcfPcbH` | Instance UIStroke | 682 | `Instance.new("UIStroke",wWoIkhREc)` |
+| `wdBsFVrTJz` | Instance ImageLabel | 686 | `Instance.new("ImageLabel")` |
+| `USbPKdyB` | Instance TextLabel | 696 | `Instance.new("TextLabel")` |
+| `TEkIALhQCr` | Instance TextLabel | 702 | `Instance.new("TextLabel")` |
+| `wovmMEAD` | Instance ScrollingFrame | 708 | `Instance.new("ScrollingFrame")` |
+| `unYVufvRy` | Instance UIListLayout | 719 | `Instance.new("UIListLayout",wovmMEAD)` |
+| `WTBxqZRYv` | Instance Frame | 722 | `Instance.new("Frame")` |
+| `EaRaqAflON` | Instance TextLabel | 728 | `Instance.new("TextLabel")` |
+| `hqSVpnqcaWpY` | Instance TextLabel | 738 | `Instance.new("TextLabel")` |
+| `VhrHJdng` | อื่นๆ | 750 | `SHktJfsrG("Recommend",fsbMljUO)` |
+| `pkOonMzCCQKs` | อื่นๆ | 751 | `SHktJfsrG("All Scripts","79159724721875")` |
+| `KtkRixlJJ` | อื่นๆ | 752 | `SHktJfsrG("Credits","104769040369946")` |
+| `pDRxsWfDoD` | อื่นๆ | 753 | `lDXETeLNCzp(VhrHJdng)` |
+| `faGxDZlbpvy` | อื่นๆ | 754 | `lDXETeLNCzp(pkOonMzCCQKs)` |
+| `BixdbCiWddc` | อ้างอิง Instance | 765 | `rmaCFQsMK:WaitForChild("Remotes",5)` |
+| `IqMrkELB` | อื่นๆ | 766 | `(gethui and gethui())or GiwwaIbBQAQ` |
+| `MNhmpTCRxVx` | อ้างอิง Instance | 767 | `IqMrkELB:FindFirstChild("MagicAlay_IOS_Sidebar_GUI")` |
+| `PVRzJUzq` | อ้างอิง Instance | 768 | `IqMrkELB:FindFirstChild("InGameScreen")` |
+| `hDxJQkdZqp` | อ้างอิง Instance | 769 | `IqMrkELB:FindFirstChild("MoblieControls")` |
+| `cJocAEopQ` | Instance Frame | 773 | `Instance.new("Frame")` |
+| `nyFaDmtKSY` | Instance UIListLayout | 776 | `Instance.new("UIListLayout",cJocAEopQ)` |
+| `IxJbqIth` | Instance Frame | 779 | `Instance.new("Frame")` |
+| `NhUBkLMVfXIn` | Instance UIStroke | 786 | `Instance.new("UIStroke",IxJbqIth)` |
+| `LqrQSQYqG` | Instance TextLabel | 800 | `Instance.new("TextLabel")` |
+| `IptjIJzTkkRc` | ตัวเลข | 821 | `145` |
+| `hCjpTksw` | ตัวเลข | 822 | `490` |
+| `NScrGXIdJ` | boolean | 833 | `false` |
+| `aGrczowPO` | อื่นๆ | 834 | `` |
+| `HBSOPRmktyy` | อื่นๆ | 834 | `` |
+| `VkqgCjCHG` | Instance Frame | 839 | `Instance.new("Frame")` |
+| `COxgTFdsocA` | Instance Frame | 856 | `Instance.new("Frame",VkqgCjCHG)` |
+| `bGcZiMpe` | Instance UIStroke | 869 | `Instance.new("UIStroke",PLdowkMmGYP)` |
+| `FdnleRWHaoiN` | Instance UIListLayout | 930 | `Instance.new("UIListLayout",JaghVOGMyS)` |
+| `wNTTmbIPfz` | อื่นๆ | 942 | `SHktJfsrG("Combat","rbxassetid://6031075931")` |
+| `YsUUIUBxa` | อื่นๆ | 943 | `SHktJfsrG("Visuals","rbxassetid://6031075931")` |
+| `ksWMwFrFmYj` | อื่นๆ | 944 | `SHktJfsrG("Player","rbxassetid://6031075931")` |
+| `LMhxbaIv` | Instance ImageButton | 951 | `Instance.new("ImageButton")` |
+| `aZTpGGNZqNKx` | Instance UIStroke | 956 | `Instance.new("UIStroke",LMhxbaIv)` |
+| `HNuPxMRq` | boolean | 958 | `false` |
+| `LZYRTwrHIS` | อื่นๆ | 959 | `` |
+| `FGQcXNnUfZrp` | อื่นๆ | 959 | `` |
+| `xkIycVcP` | ตัวเลข | 960 | `5` |
+| `zemhIPmKqWW` | boolean | 961 | `true` |
+| `QspVBWOFE` | อื่นๆ | 967 | `cnCQuLVL.ViewportSize` |
+| `ygZFoLifUMTV` | อื่นๆ | 968 | `LMhxbaIv.AbsolutePosition.X` |
+| `cuMBYcxCWu` | อื่นๆ | 969 | `LMhxbaIv.AbsolutePosition.Y` |
+| `ttDqkhlkAm` | ตัวเลข | 970 | `12` |
+| `XhxImyxdzwmb` | อื่นๆ | 971 | `math.clamp(cuMBYcxCWu,12,QspVBWOFE.Y-LMhxbaIv.AbsoluteSize.Y-12)` |
+| `WYSsmRDsSSl` | Instance TextLabel | 985 | `Instance.new("TextLabel")` |
+| `UjkVfkDfwGQ` | Instance Frame | 995 | `Instance.new("Frame")` |
+| `PqkzLtiaUNq` | อื่นๆ | 1013 | `default or min` |
+| `QrLgWwqkG` | Instance TextButton | 1034 | `Instance.new("TextButton")` |
+| `lDyglkoZa` | Instance Frame | 1042 | `Instance.new("Frame")` |
+| `TCCEHOTEfEF` | อื่นๆ | 1049 | `math.clamp(input.Position.X,QrLgWwqkG.AbsolutePosition.X,QrLgWwqkG.Abs` |
+| `NbrfrEyT` | อื่นๆ | 1050 | `(TCCEHOTEfEF-QrLgWwqkG.AbsolutePosition.X)/QrLgWwqkG.AbsoluteSize.X` |
+| `LkVxZjWAEXN` | Instance TextButton | 1063 | `Instance.new("TextButton")` |
+| `rHyOhbVtB` | Instance UIStroke | 1068 | `Instance.new("UIStroke",LkVxZjWAEXN)` |
+| `scFytNyWLs` | ตาราง | 1071 | `{"Head","HumanoidRootPart","UpperTorso","LowerTorso"}` |
+| `XDAcngLFLH` | ตัวเลข | 1072 | `1` |
+| `PzcujsBGV` | อื่นๆ | 1076 | `nil` |
+| `tqsylmcwE` | อื่นๆ | 1077 | `math.huge` |
+| `oiCDnTemOFaE` | อื่นๆ | 1078 | `(yzPoAdZto.Character[_G.AimPart].Position-DbMurqdeP.Character.Humanoid` |
+| `UhXUscLZ` | อื่นๆ | 1083 | `nil` |
+| `RVNZytYFBS` | Instance TextButton | 1086 | `Instance.new("TextButton")` |
+| `qmuqKbHnZ` | Instance UIStroke | 1091 | `Instance.new("UIStroke",RVNZytYFBS)` |
+| `gSgzfannJ` | ตัวเลข | 1094 | `1` |
+| `Olgvtdiczv` | อ้างอิง Instance | 1102 | `yzPoAdZto.Character:FindFirstChild("MagicAlayESP")` |
+| `ehNVFNmKUuWD` | ตาราง | 1109 | `{}` |
+| `KuFPcQupr` | อื่นๆ | 1110 | `Drawing.new("Line")` |
+| `TmmEBvpBbe` | อื่นๆ | 1114 | `yzPoAdZto.Character.HumanoidRootPart` |
+| `pcMpjuXrCGjq` | อื่นๆ | 1115 | `cnCQuLVL:WorldToViewportPoint(TmmEBvpBbe.Position)` |
+| `FNWognqS` | อื่นๆ | 1115 | `cnCQuLVL:WorldToViewportPoint(TmmEBvpBbe.Position)` |
+| `HQOUKxSuTq` | ตาราง | 1119 | `{}` |
+| `PQiwhPQFGzyD` | ตาราง | 1120 | `{}` |
+| `fwCIVKMLK` | อื่นๆ | 1121 | `yzPoAdZto.Character.Humanoid` |
+| `FnThjzwOjr` | อื่นๆ | 1123 | `HQOUKxSuTq[yzPoAdZto]or newHealth` |
+| `KtNYjNeTqKh` | อื่นๆ | 1126 | `yzPoAdZto.Character.Head` |
+| `yFGtzNdr` | อ้างอิง Instance | 1128 | `KtNYjNeTqKh:FindFirstChild("HealthTagGui")` |
+| `utJgxYxjZt` | Instance TextLabel | 1135 | `Instance.new("TextLabel")` |
+| `CZaPgOjYEws` | อื่นๆ | 1152 | `getrawmetatable(game)` |
+| `qpBADToC` | ตาราง | 1155 | `{...}` |
+| `DVHtwfbBJHP` | อ้างอิง Instance | 1156 | `VSULWMgIl:FindFirstChild("Mobs")or VSULWMgIl:FindFirstChild("Enemies")` |
+| `OAQStUpz` | อ้างอิง Instance | 1168 | `DbMurqdeP:WaitForChild("PlayerGui")` |
+| `qsoEMQEOYdc` | อ้างอิง Instance | 1171 | `OAQStUpz:FindFirstChild("SafeAutoSellUI")` |
+| `pBBlqfqRDKG` | ตัวเลข | 1176 | `0` |
+| `hESOFSObKtBa` | อื่นๆ | 1177 | `sbEoPYAkyU()` |
+| `SVJECSZm` | Instance TextLabel | 1204 | `Instance.new("TextLabel")` |
+| `MmdXZrSpUjYr` | boolean | 1214 | `false` |
+| `cUNItUBferNE` | อื่นๆ | 1215 | `` |
+| `BVUWsjWKQ` | อื่นๆ | 1215 | `` |
+| `eRtHKYiGBya` | อื่นๆ | 1215 | `` |
+| `AeCYZIVHGUH` | อื่นๆ | 1305 | `SHktJfsrG("Main","rbxassetid://6031075931")` |
+| `yUzqRuDpKQpA` | อื่นๆ | 1307 | `SHktJfsrG("Settings","rbxassetid://6031075931")` |
+| `PNfkBcHEfIPE` | อื่นๆ | 1322 | `` |
+| `LlojfkgLVPGm` | boolean | 1323 | `false` |
+| `wDisyoWFBmzg` | ตำแหน่ง/ขนาด | 1356 | `CFrame.new(417.488556,171.070755,-49.2427864,1,0,0,0,1,0,0,0,1)` |
+| `vdZPpnAUd` | อื่นๆ | 1358 | `DbMurqdeP.Character` |
+| `SnCBhuSGNak` | อ้างอิง Instance | 1360 | `vdZPpnAUd and vdZPpnAUd:FindFirstChildOfClass("Humanoid")` |
+| `JLviKFzNN` | อ้างอิง Instance | 1361 | `VSULWMgIl:FindFirstChild("HalloweenTokenFolder")` |
+| `xUcaTdNh` | อ้างอิง Instance | 1362 | `JLviKFzNN:FindFirstChild("Tokens")` |
+| `BhrwKPjm` | อื่นๆ | 1363 | `nil` |
+| `yzPoAdZto` | อ้างอิง Instance | 1364 | `tokenObj:FindFirstChildWhichIsA("BasePart")` |
+| `vwbJpReb` | ตำแหน่ง/ขนาด | 1369 | `CFrame.new(417.488556,171.070755,-49.2427864,1,0,0,0,1,0,0,0,1)` |
+| `OYWCXEdOL` | อ้างอิง Instance | 1374 | `VSULWMgIl:FindFirstChild("PumpkinBoss")` |
+| `IOcJmFsmLyGb` | อ้างอิง Instance | 1375 | `OYWCXEdOL:FindFirstChild("DamagePlatforms")` |
+| `nCriMGBkjP` | อ้างอิง Instance | 1376 | `IOcJmFsmLyGb:FindFirstChild("DamagePlatform")` |
+| `SogJsLXxdEyR` | อ้างอิง Instance | 1377 | `VSULWMgIl:FindFirstChild("HalloweenTokenFolder")` |
+| `FIAhaqXWPG` | อ้างอิง Instance | 1378 | `SogJsLXxdEyR:FindFirstChild("Tokens")` |
+| `bjFKVGJWe` | อ้างอิง Instance | 1379 | `FIAhaqXWPG:FindFirstChild("TokenTemplate")` |
+| `kQvMiRko` | boolean | 1387 | `false` |
+| `oJxYfgZsKlJt` | boolean | 1388 | `false` |
+| `iHfPCgmcte` | อ้างอิง Instance | 1389 | `rmaCFQsMK:FindFirstChild("House")` |
+| `EGDhOcDVNiA` | อ้างอิง Instance | 1391 | `VSULWMgIl:FindFirstChild("DoorFolder")` |
+| `smRoglPA` | อ้างอิง Instance | 1392 | `model1:FindFirstChild("Door")` |
+| `nPcYMjQcOfCQ` | อ้างอิง Instance | 1393 | `smRoglPA:FindFirstChild("DoorPart")` |
+| `fzZYvXpK` | อ้างอิง Instance | 1394 | `nPcYMjQcOfCQ:FindFirstChildOfClass("ProximityPrompt")or smRoglPA:FindF` |
+| `MBKXZKYHVb` | อ้างอิง Instance | 1399 | `rmaCFQsMK:FindFirstChild("Events")` |
+| `UGpCWOzVSK` | อ้างอิง Instance | 1400 | `MBKXZKYHVb:FindFirstChild("OpenCrateBaht")` |
+| `rSvLTQMIjt` | อื่นๆ | 1412 | `DbMurqdeP` |
+| `NeTmKjlF` | อื่นๆ | 1413 | `rmaCFQsMK` |
+| `mbwCSkSUb` | ตาราง | 1415 | `{Open=TweenInfo.new(0.5,Enum.EasingStyle.Back,Enum.EasingDirection.Out` |
+| `kDztbDuMMrsj` | Instance ScreenGui | 1416 | `Instance.new("ScreenGui")` |
+| `IgQEmqHpCOg` | Instance Frame | 1421 | `Instance.new("Frame")` |
+| `xtdrrsacE` | Instance UIListLayout | 1428 | `Instance.new("UIListLayout")` |
+| `dNnkAQarqsyS` | Instance Frame | 1434 | `Instance.new("Frame")` |
+| `yNMuBmJQqGil` | Instance UICorner | 1441 | `Instance.new("UICorner",dNnkAQarqsyS)` |
+| `oZyegdNxfsqk` | Instance UIStroke | 1443 | `Instance.new("UIStroke",dNnkAQarqsyS)` |
+| `sNuJrkpE` | Instance Frame | 1447 | `Instance.new("Frame")` |
+| `MmsMKJDrE` | Instance Frame | 1457 | `Instance.new("Frame")` |
+| `xeYgzwab` | Instance ImageLabel | 1462 | `Instance.new("ImageLabel")` |
+| `aSYjajITEn` | Instance TextLabel | 1471 | `Instance.new("TextLabel")` |
+| `kKLYhzjUEg` | Instance TextLabel | 1483 | `Instance.new("TextLabel")` |
+| `SXFWUmYBPHK` | Instance TextLabel | 1495 | `Instance.new("TextLabel")` |
+| `mEqlzQny` | Instance TextLabel | 1507 | `Instance.new("TextLabel")` |
+| `ImHQxsyPs` | ตัวเลข | 1520 | `88` |
+| `NlTYfUdU` | boolean | 1528 | `false` |
+| `dScKrgnhO` | ตำแหน่ง/ขนาด | 1530 | `yaEHMGDQ:Create(dNnkAQarqsyS,mbwCSkSUb.Close,{Size=UDim2.new(1,0,0,0),` |
+| `KqCqVRqQ` | อื่นๆ | 1538 | `nil,false` |
+| `ukVgaEjWVf` | อื่นๆ | 1538 | `nil,false` |
+| `ceIHTaFrxQa` | ตาราง | 1542 | `{SlimeGroupHunter=false,NoobyHunter=false,NoobGroupHunter=false,ThugHu` |
+| `yFPYdwnlXFW` | ตาราง | 1543 | `{["Sans"]="sans",["Chara"]="chara",["Duck Boss"]="duck boss",["Shinoa"` |
+| `tjbkprNxNi` | อื่นๆ | 1544 | `nil` |
+| `uNDeYzZtt` | ตาราง | 1682 | `{}` |
+| `nNuFDYxfS` | Instance Frame | 1683 | `Instance.new("Frame")` |
+| `dSczesZl` | Instance TextLabel | 1689 | `Instance.new("TextLabel")` |
+| `rtwgBdJzFnrR` | Instance TextButton | 1699 | `Instance.new("TextButton")` |
+| `lFHdBIkkGe` | Instance Frame | 1706 | `Instance.new("Frame")` |
+| `jtoBhrrfedWy` | Instance Frame | 1716 | `Instance.new("Frame")` |
+| `QcVdaEGzTSDe` | Instance TextButton | 1722 | `Instance.new("TextButton")` |
+| `YHPwSXTZW` | Instance Frame | 1731 | `Instance.new("Frame")` |
+| `rTEetEPmM` | Instance TextLabel | 1747 | `Instance.new("TextLabel")` |
+| `QyHgPzMxt` | Instance Frame | 1757 | `Instance.new("Frame")` |
+| `hdixsGhXkd` | Instance Frame | 1763 | `Instance.new("Frame")` |
+| `OZUHgcCU` | boolean | 1768 | `false` |
+| `CVNUVfddM` | อื่นๆ | 1769 | `math.clamp((input.Position.X-QyHgPzMxt.AbsolutePosition.X)/QyHgPzMxt.A` |
+| `MCWEKstJVx` | อื่นๆ | 1770 | `math.floor(min+(max-min)*CVNUVfddM)` |
+| `KiLXBKdxAz` | Instance Frame | 1775 | `Instance.new("Frame")` |
+| `AhRWchTigP` | Instance TextLabel | 1791 | `Instance.new("TextLabel")` |
+| `tIOdtzXTS` | Instance Frame | 1800 | `Instance.new("Frame")` |
+| `bSFQhRbo` | Instance UIListLayout | 1805 | `Instance.new("UIListLayout",tIOdtzXTS)` |
+| `OYLgyltWT` | Instance TextButton | 1807 | `Instance.new("TextButton")` |
+| `iJiGORApsWW` | boolean | 1820 | `false` |
+| `QBpCSgfEQdx` | ตำแหน่ง/ขนาด | 1822 | `iJiGORApsWW and UDim2.new(1,-10,0,40+(#list*28))or UDim2.new(1,-10,0,3` |
+| `QBMlpajra` | อื่นๆ | 1831 | `SHktJfsrG("Main","rbxassetid://6031075931")` |
+| `jNMFNZyoZlyY` | อื่นๆ | 1832 | `SHktJfsrG("Boss","rbxassetid://6031075931")` |
+| `RMzOYNiNR` | อื่นๆ | 1833 | `SHktJfsrG("Combat","rbxassetid://6031075931")` |
+| `VYbTqvFTckD` | อื่นๆ | 1834 | `SHktJfsrG("Stats","rbxassetid://6031075931")` |
+| `SlCNBqrcL` | อื่นๆ | 1835 | `SHktJfsrG("Misc","rbxassetid://6031075931")` |
+| `xnoOSfuRqecv` | ตาราง | 1838 | `{"Cursed Scythe","Epic Sword","Youru","True Yorou","Elucidator","Dual` |
+| `RypfGPHONnd` | อื่นๆ | 1863 | `VSULWMgIl.CurrentCamera` |
+| `ZfYwAHaNq` | ตำแหน่ง/ขนาด | 1869 | `UDim2.new(0,ttDqkhlkAm,0,XhxImyxdzwmb)` |
+| `jTUiASCJV` | อื่นๆ | 1870 | `string.lower(obj.Name)` |
+| `EVrgWgzeoSL` | อื่นๆ | 1873 | `string.lower(name)` |
+| `ZsdWoveksIHb` | อื่นๆ | 1877 | `displayName:gsub(" ","").."Hunter"` |
+| `BdfMoctoR` | อื่นๆ | 1878 | `mPTjHIjUPy(internalName)` |
+| `zKdCoypI` | อื่นๆ | 1878 | `mPTjHIjUPy(internalName)` |
+| `phFbOXOLev` | อื่นๆ | 1878 | `mPTjHIjUPy(internalName)` |
+| `mwIWYYzHJkXP` | อื่นๆ | 1880 | `HKOUnHErx()` |
+| `dAFgOBDnDVc` | อ้างอิง Instance | 1881 | `mwIWYYzHJkXP:FindFirstChild("Combat_Event",true)or rSvLTQMIjt.Backpack` |
+| `aRjOmGILKP` | อ้างอิง Instance | 1882 | `mwIWYYzHJkXP:FindFirstChild("Weapon_Event",true)or rSvLTQMIjt.Backpack` |
+| `QinphxBYF` | อ้างอิง Instance | 1883 | `require(NeTmKjlF:WaitForChild("Module"):WaitForChild("Hitbox"))` |
+| `pSLRMBUQyjM` | อื่นๆ | 1884 | `ceIHTaFrxQa.AttackRange` |
+| `UoIVIdLnDD` | อื่นๆ | 1885 | `QinphxBYF:Overlap({MaxTarget=100,Humanoid=mwIWYYzHJkXP.Humanoid,CF=mwI` |
+| `NRMRfgZmBpqT` | อ้างอิง Instance | 1887 | `rSvLTQMIjt:FindFirstChild("Backpack")` |
+| `tlkQCoRqka` | อ้างอิง Instance | 1891 | `QhXUTruDVkk:FindFirstChildOfClass("RemoteEvent")or NeTmKjlF:FindFirstC` |
+| `ttFaIqlNE` | อื่นๆ | 1897 | `mwIWYYzHJkXP.HumanoidRootPart` |
+| `aKWXWFHH` | อื่นๆ | 1898 | `mwIWYYzHJkXP.Humanoid` |
+| `ePcjBjuUks` | อื่นๆ | 1899 | `nil` |
+| `loNpFoCDakTF` | อื่นๆ | 1900 | `tjbkprNxNi[2]` |
+| `LdxgVfRzozB` | อ้างอิง Instance | 1901 | `tjbkprNxNi[1]:FindFirstChildOfClass("Humanoid")` |
+| `UxDsOzgtkGe` | อื่นๆ | 1902 | `nil,nil,nil` |
+| `IgCiMqRY` | อื่นๆ | 1917 | `rSvLTQMIjt.Backpack` |
+| `bpJSadWpsWH` | อ้างอิง Instance | 1918 | `mwIWYYzHJkXP:FindFirstChildOfClass("Tool")` |
+| `MnjvnwUNt` | อ้างอิง Instance | 1919 | `IgCiMqRY:FindFirstChild(ceIHTaFrxQa.ToolName)` |
+| `cawfuAdFpk` | Instance UICorner | 2081 | `Instance.new("UICorner",LMhxbaIv)` |
+| `lrMqeVhui` | อื่นๆ | 2100 | `TweenInfo.new(0.35,Enum.EasingStyle.Quart,Enum.EasingDirection.Out)` |
+| `hiGtwxORHOA` | อ้างอิง Instance | 2127 | `rmaCFQsMK:WaitForChild("Eventos")` |
+| `zYxaAVIT` | อ้างอิง Instance | 2128 | `hiGtwxORHOA:WaitForChild("WeaponFired")` |
+| `bcKoWbZBkq` | อ้างอิง Instance | 2129 | `hiGtwxORHOA:WaitForChild("WeaponHit")` |
+| `yfciRPZfV` | อ้างอิง Instance | 2130 | `hiGtwxORHOA:WaitForChild("WeaponReloadRequest")` |
+| `pQPOBLEXZyc` | อ้างอิง Instance | 2131 | `require(rmaCFQsMK:WaitForChild("Shop"):WaitForChild("WeaponsSystem"))` |
+| `qdDxYqogYS` | ตัวเลข | 2132 | `0.15` |
+| `eiLiJQMHRKgP` | ตัวเลข | 2133 | `900` |
+| `KZVjxiiUiHNE` | ตัวเลข | 2135 | `0` |
+| `MpjMyXUNWtP` | อื่นๆ | 2136 | `pQPOBLEXZyc.currentWeapon` |
+| `gytCNuihStKT` | อ้างอิง Instance | 2137 | `DbMurqdeP.Character or VSULWMgIl:FindFirstChild(DbMurqdeP.Name)` |
+| `QhXUTruDVkk` | อ้างอิง Instance | 2138 | `gytCNuihStKT and gytCNuihStKT:FindFirstChildWhichIsA("Tool")` |
+| `QkpYoJkho` | อื่นๆ | 2140 | `pcall(pQPOBLEXZyc.getWeaponForInstance,QhXUTruDVkk)` |
+| `UvFRFIShu` | อื่นๆ | 2140 | `pcall(pQPOBLEXZyc.getWeaponForInstance,QhXUTruDVkk)` |
+| `yaUwukWS` | อ้างอิง Instance | 2144 | `DbMurqdeP.Character or VSULWMgIl:FindFirstChild(DbMurqdeP.Name)` |
+| `RJNRAxNqsq` | อ้างอิง Instance | 2145 | `yaUwukWS and yaUwukWS:FindFirstChildWhichIsA("Tool")~=nil` |
+| `TQlNpsAuC` | อื่นๆ | 2146 | `getgenv().ShootKA_Enabled` |
+| `BGhYDnBAPY` | อื่นๆ | 2147 | `getgenv().ShootKA_HeldOnly` |
+| `ctbkOnJF` | อื่นๆ | 2150 | `JZnBLbbGcV()` |
+| `yjHktwixX` | ตาราง | 2151 | `{}` |
+| `KOthBsTtseM` | อื่นๆ | 2156 | `(MpjMyXUNWtP and MpjMyXUNWtP.nextShotId)or 1` |
+| `ncVhfgQyP` | อื่นๆ | 2159 | `KOthBsTtseM+_G.__SHOTEXTRA` |
+| `TaSZwUvarur` | อื่นๆ | 2160 | `tgt.head.Position` |
+| `jInWYVeba` | อื่นๆ | 2161 | `TaSZwUvarur-ctbkOnJF` |
+| `lmXQrVnJ` | อื่นๆ | 2167 | `(MpjMyXUNWtP.configValues and MpjMyXUNWtP.configValues.AmmoCapacity)or` |
+| `SmNZORJNqfG` | ตัวเลข | 2169 | `0` |
+| `NhRBEYYfU` | อื่นๆ | 2170 | `os.clock()` |
+| `dIkGSOLtqI` | อื่นๆ | 2175 | `pcall(fmCvThONC)` |
+| `VaIhAWNTm` | Service CollectionService | 2186 | `game:GetService("CollectionService")` |
+| `rzSphbwTK` | ตาราง | 2189 | `{}` |
+| `hxvAGkUK` | อ้างอิง Instance | 2191 | `DbMurqdeP:FindFirstChildOfClass("PlayerGui")` |
+| `BPlBVTPRXitV` | อื่นๆ | 2357 | `AeCYZIVHGUH` |
+| `UgKperWLXALv` | อื่นๆ | 2358 | `getgenv().MissionRunId` |
+| `sLMQhRPulPWe` | อื่นๆ | 2360 | `getgenv().M` |
+| `blQXHtZcUqJM` | อ้างอิง Instance | 2361 | `rmaCFQsMK:FindFirstChild("ACS_Engine")` |
+| `tOVOlSmMUA` | อ้างอิง Instance | 2362 | `blQXHtZcUqJM and blQXHtZcUqJM:FindFirstChild("Events")` |
+| `raHqNYwlIe` | อ้างอิง Instance | 2363 | `rmaCFQsMK:FindFirstChild("Network")` |
+| `gZOObvyd` | Instance TextLabel | 2364 | `Instance.new("TextLabel")` |
+| `OMgDoLSvzn` | Instance Frame | 2404 | `Instance.new("Frame")` |
+| `zYehJbSgFb` | Instance Frame | 2411 | `Instance.new("Frame")` |
+| `TPkwIbTtc` | ตาราง | 2421 | `{}` |
+| `eSeNIrVLt` | ตาราง | 2423 | `{ZoomValue=70,Zoom2Value=70,AimRM=1,SpreadRM=1,DamageMod=1,minDamageMo` |
+| `lBYEMRxxKKKz` | อื่นๆ | 2428 | `DbMurqdeP.Character` |
+| `fdLEnfEEnVY` | ตาราง | 2429 | `{}` |
+| `wRNXNVWss` | อื่นๆ | 2430 | `piTfAghbDMOe()` |
+| `nYKesSXvhaqx` | อ้างอิง Instance | 2433 | `wSNOOsAdJl:FindFirstChildOfClass("Humanoid")` |
+| `wSNOOsAdJl` | อื่นๆ | 2434 | `nYKesSXvhaqx.Parent` |
+| `yMEwCxid` | อื่นๆ | 2437 | `vTZbuPxiaOxR("ChangeDoor")` |
+| `rcZZmvorZxRi` | อื่นๆ | 2438 | `VaIhAWNTm:GetTagged("EnterableDoor")` |
+| `wglFodWL` | อื่นๆ | 2439 | `nil` |
+| `thXsVDSt` | ตัวเลข | 2442 | `0` |
+| `bvCQPAXkDTmO` | อื่นๆ | 2448 | `vTZbuPxiaOxR("ShoutNPC")` |
+| `QJLVBHaWFix` | อื่นๆ | 2449 | `VaIhAWNTm:GetTagged("NPC")` |
+| `EIinOXmlmr` | อื่นๆ | 2452 | `dTtFiOFoFG("Autokill (H)",sLMQhRPulPWe.Kill,function(bvkGOUfjVhE)sLMQh` |
+| `qUVIrBnvOz` | อื่นๆ | 2452 | `dTtFiOFoFG("Armed Only",sLMQhRPulPWe.ArmedOnly,function(bvkGOUfjVhE)sL` |
+| `cQCoJPOFMZd` | อื่นๆ | 2452 | `dTtFiOFoFG("Kill NPCs",sLMQhRPulPWe.KillNPC,function(bvkGOUfjVhE)sLMQh` |
+| `vEzsAqznHAR` | อื่นๆ | 2452 | `dTtFiOFoFG("Kill Players",sLMQhRPulPWe.KillPlayers,function(bvkGOUfjVh` |
+| `aohlFGRKTT` | อื่นๆ | 2452 | `dTtFiOFoFG("ESP Highlight (N)",sLMQhRPulPWe.ESP,function(bvkGOUfjVhE)s` |
+| `fJQJisXpvmk` | อ้างอิง Instance | 2455 | `pcall(require,QhXUTruDVkk:FindFirstChild("ACS_Settings"))` |
+| `iykyIUCAbX` | อ้างอิง Instance | 2455 | `pcall(require,QhXUTruDVkk:FindFirstChild("ACS_Settings"))` |
+| `OqMXHFbKhJ` | อื่นๆ | 2456 | `iYkkcKNYigc(tOVOlSmMUA)` |
+| `nEBrYpKXAS` | ตาราง | 2459 | `{}` |
+| `sbEoPYAkyU` | ตัวเลข | 2460 | `0` |
+| `QThrFIhIxz` | ตาราง | 2461 | `{}` |
+| `aIjokSlIHNRm` | สี | 2472 | `lVpKwVwe(model)and Color3.fromRGB(255,0,0)or Color3.fromRGB(0,255,0)` |
+| `gwrtdLBPMABw` | Instance Frame | 2494 | `Instance.new("Frame",gqlKmiZcCIc)` |
+| `HKTUjgfBmrmG` | Instance UICorner | 2500 | `Instance.new("UICorner",gwrtdLBPMABw)` |
+| `zdkCoMCCtFR` | Instance UIStroke | 2502 | `Instance.new("UIStroke",gwrtdLBPMABw)` |
+| `dcZmfqtPxxME` | Instance TextLabel | 2506 | `Instance.new("TextLabel",gwrtdLBPMABw)` |
+| `ojCeFQzXGHwM` | Instance TextLabel | 2559 | `Instance.new("TextLabel")` |
+| `iDqItEvXV` | Instance Frame | 2662 | `Instance.new("Frame")` |
+| `aDdYDSdA` | Instance Frame | 2666 | `Instance.new("Frame")` |
+| `icHAuLHlSP` | ตำแหน่ง/ขนาด | 2671 | `GeIwxseOqV and UDim2.new(1,-20,0.5,-9)or UDim2.new(0,2,0.5,-9)` |
+| `wetLWExY` | สี | 2672 | `GeIwxseOqV and Color3.fromRGB(52,199,89)or Color3.fromRGB(120,120,130)` |
+| `vOzGrrdiNsTN` | อื่นๆ | 2673 | `GeIwxseOqV and 0 or 0.5` |
+| `yWRICYWMJCW` | ตาราง | 2678 | `{[1]="LemonStand",n=1,}` |
+| `SklGSbvU` | ตาราง | 2679 | `{[1]=1,n=1,}` |
+| `RsmXfZCtC` | อื่นๆ | 2680 | `` |
+| `mBHkOtzJX` | อื่นๆ | 2683 | `` |
+| `LLzqEDNi` | อ้างอิง Instance | 2920 | `rmaCFQsMK:WaitForChild("Remotes"):WaitForChild("ShootReplicate")` |
+| `cpBKkWWbiw` | อ้างอิง Instance | 2921 | `VSULWMgIl:WaitForChild("Characters")` |
+| `dHDYYdqULtKa` | อื่นๆ | 2924 | `pcall(function() return filtergc("function",{Name="requestShot"},true)` |
+| `ElwkEsfJAQf` | อื่นๆ | 2925 | `pcall(debug.getupvalue,dHDYYdqULtKa,2)` |
+| `bvkGOUfjVhE` | อื่นๆ | 2925 | `pcall(debug.getupvalue,dHDYYdqULtKa,2)` |
+| `wNFVZEwdsMU` | อื่นๆ | 2926 | `DbMurqdeP.Team` |
+| `wkiPQvtGoGAg` | อื่นๆ | 2927 | `VSULWMgIl.CurrentCamera` |
+| `THpGyZFi` | อื่นๆ | 2929 | `nil,eiLiJQMHRKgP` |
+| `ZiZNxBsK` | อื่นๆ | 2929 | `nil,eiLiJQMHRKgP` |
+| `SblOBACRAHbW` | อื่นๆ | 2934 | `xqyFlEQYQEM()` |
+| `dFVZWDfXSz` | ตำแหน่ง/ขนาด | 2937 | `jInWYVeba.Magnitude>0.001 and(-(jInWYVeba.Unit))or Vector3.new(0,1,0)` |
+| `ZZuXZybxXPgf` | อื่นๆ | 3159 | `pcall(function() return game:GetService("ReplicatedStorage").Remotes.G` |
+| `BZdHInNl` | อื่นๆ | 3160 | `WpEsAhZH.LocalPlayer` |
+| `bmxqFERbflx` | อ้างอิง Instance | 3161 | `BZdHInNl.Character and BZdHInNl.Character:FindFirstChild("HumanoidRoot` |
+| `axZEfGFmXy` | อ้างอิง Instance | 3164 | `yzPoAdZto.Character:FindFirstChild("Head")or yzPoAdZto.Character:FindF` |
+| `HkHFzBLPLydg` | อื่นๆ | 3166 | `bmxqFERbflx.Position` |
+| `tJKIodBqjMy` | อ้างอิง Instance | 3385 | `rmaCFQsMK:FindFirstChild("Eventos")` |
+| `fpLjvMqTeBCr` | อ้างอิง Instance | 3386 | `rmaCFQsMK:FindFirstChild("WeaponsSystem")` |
+| `sMcCmPiKR` | อ้างอิง Instance | 3387 | `tJKIodBqjMy and tJKIodBqjMy:FindFirstChild("WeaponFired")` |
+| `nsvuOsUR` | อ้างอิง Instance | 3388 | `tJKIodBqjMy and tJKIodBqjMy:FindFirstChild("WeaponHit")` |
+| `KlxqomjVBZk` | อ้างอิง Instance | 3389 | `tJKIodBqjMy and tJKIodBqjMy:FindFirstChild("WeaponReloadRequest")` |
+| `VhLWubYkbzz` | อื่นๆ | 3390 | `math.random(100000,200000)` |
+| `yjPttLxZ` | ตาราง | 3391 | `{"Sniper","AWM"}` |
+| `ffbQEyIRWO` | ตาราง | 3412 | `{{Title="[FPS] Gun Grounds FFA",Desc="Script by MagicAlay",PlaceId=121` |
+| `cplewQpJOK` | อ้างอิง Instance | 3414 | `game.PlaceId` |
+| `ROgzNKKOvLV` | อื่นๆ | 3415 | `zdyCFPFzMB()` |
+
+### 3.5 ฟังก์ชัน local ทั้งหมดใน __12_ (126 ตัว)
+
+| ฟังก์ชัน | พารามิเตอร์ | บรรทัด | ขนาด (token) | สตริงที่ใช้ในฟังก์ชัน |
+|---|---|---|---|---|
+| `zaFmgdeV` | `soundId` | 50 | 57 | Sound |
+| `shdwZUfoYRFJ` | `UIQTjNYMo` | 56 | 245 | embeds, title, MagicAlay Hub, color, thumbnail, url, fields, name, Name, value |
+| `yBQIyFVWpVp` | `` | 62 | 146 | table |
+| `hGsEnvhUPLc` | `imageLabel, assetId` | 76 | 46 | rbxassetid://, ContentProvider |
+| `VHusqqkF` | `text` | 77 | 20 |  |
+| `yliwVRvE` | `key` | 77 | 22 |  |
+| `zdyCFPFzMB` | `` | 77 | 40 |  |
+| `vhuizLWe` | `` | 78 | 26 |  |
+| `rpMdVIZim` | `frame, handle` | 78 | 194 |  |
+| `NQgdJSvjBYd` | `` | 121 | 495 | MagicAlay Hub |
+| `SDMDYnYzI` | `xgooKOdfEt, message` | 145 | 26 |  |
+| `eVIMfPHN` | `` | 151 | 192 | iOSLoginModal |
+| `KfNxrtzpvO` | `parent, CVNUVfddM, size, bgCol, text, leSsFtgz, customIconId` | 230 | 392 | TextButton, UICorner, ImageLabel |
+| `vSssaEKx` | `` | 252 | 145 | Access Granted, Passcode Verified Successfully! |
+| `MgKFiyoF` | `` | 259 | 189 | %s+, admin, Access Denied, Incorrect Key! Enter: MagicAlay |
+| `aOlnDwJwMIK` | `` | 307 | 93 |  |
+| `TFDjhlmmNM` | `xgooKOdfEt, desc, defaultState, leSsFtgz` | 350 | 747 | Frame, UICorner, UIStroke, TextLabel, TextButton |
+| `xhWVPijaocI` | `text, xPos, leSsFtgz` | 422 | 138 | TextButton, UICorner |
+| `epIxpttXSfCc` | `scriptTitle, executeCallback` | 556 | 151 | Are you sure you want to run [, ]? |
+| `FODiFktoePba` | `` | 564 | 117 |  |
+| `sUWKeyOQb` | `` | 569 | 213 |  |
+| `SHktJfsrG` | `tabName, rawIconId` | 590 | 614 | TextButton, TabBtn, ImageLabel, TabIcon, TextLabel, TabLabel, Frame, Page |
+| `SxtqHUFA` | `` | 624 | 246 |  |
+| `lDXETeLNCzp` | `pageFrame` | 634 | 468 | Frame, SearchFrame, UICorner, TextBox, SearchBox, Search scripts..., ScrollingFrame, Cards |
+| `zDDPHJoPfW` | `container, titleText, descText, placeId, fallbackIconId, executeCallback` | 673 | 674 | TextButton, _Card, UICorner, UIStroke, ImageLabel, CardImg, rbxassetid://, rbxthumb://type |
+| `qNRRNDGt` | `pageFrame` | 708 | 440 | ScrollingFrame, CreditsScroll, UICorner, UIListLayout, Frame, TextLabel, Official Script H |
+| `hDNqLAsE` | `roleTitle, devName` | 722 | 269 | Frame, UICorner, TextLabel |
+| `mCzPCLLKwlkk` | `` | 755 | 8897 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `YfqHOjazuMQ` | `xgooKOdfEt, message` | 779 | 441 | Frame, UICorner, UIStroke, TextLabel |
+| `eVIMfPHN` | `` | 819 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 892 | 673 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 933 | 231 |  |
+| `sUWKeyOQb` | `` | 945 | 154 |  |
+| `PbssbHnEWbtY` | `parent, text, default, leSsFtgz` | 972 | 559 | TextButton, UICorner, UIStroke, TextLabel, Frame |
+| `GsaKLAbsOBdg` | `` | 1007 | 144 |  |
+| `TspQqRvopli` | `parent, text, min, max, default, leSsFtgz` | 1013 | 643 | Frame, UICorner, UIStroke, TextLabel, : , TextButton |
+| `reJMExpT` | `input` | 1049 | 102 | :  |
+| `HxFMVQxtxKK` | `` | 1158 | 5592 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `eVIMfPHN` | `` | 1183 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 1255 | 649 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 1296 | 207 |  |
+| `sUWKeyOQb` | `` | 1308 | 154 |  |
+| `PbssbHnEWbtY` | `parent, text, default, leSsFtgz` | 1330 | 777 | TextButton, Toggle, UICorner, UIStroke, TextLabel, Frame, Pill, Knob |
+| `GsaKLAbsOBdg` | `` | 1351 | 144 |  |
+| `xDumMoJzX` | `` | 1389 | 38 | House, Sell |
+| `xTzggrOpwVW` | `` | 1399 | 50 | Events, OpenCrateBaht |
+| `EmayCDJROZsT` | `` | 1403 | 10475 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `SgnCjFcyZR` | `xgooKOdfEt, message, duration` | 1433 | 1281 | Frame, iOSBanner, UICorner, UIStroke, TopPill, ContentHolder, ImageLabel, AppIcon, rbxasse |
+| `ZuwJgwJXWr` | `` | 1529 | 187 |  |
+| `eVIMfPHN` | `` | 1553 | 91 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 1632 | 2789 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 1673 | 220 |  |
+| `shgeElAYqJlf` | `input` | 1769 | 98 |  |
+| `sUWKeyOQb` | `` | 1839 | 124 |  |
+| `HKOUnHErx` | `` | 1873 | 16 |  |
+| `mPTjHIjUPy` | `name` | 1873 | 87 | Model, HumanoidRootPart, Humanoid |
+| `LzWWpaxRms` | `` | 1880 | 178 | Combat_Event, Weapon_Event, Module, Hitbox, HumanoidRootPart, Attack, Slash |
+| `VocIsAJZRyQq` | `` | 1886 | 63 | Humanoid, Backpack, Tool |
+| `umvbfGktKn` | `` | 1888 | 118 | Model, Humanoid, Tool, RemoteEvent, AttackRemote |
+| `kXFdgckfGj` | `` | 1923 | 5719 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `eVIMfPHN` | `` | 1943 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 2016 | 673 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 2057 | 231 |  |
+| `sUWKeyOQb` | `` | 2069 | 154 |  |
+| `PbssbHnEWbtY` | `parent, text, default, leSsFtgz` | 2101 | 823 | TextButton, Toggle, UICorner, UIStroke, TextLabel, Frame, Pill, Knob |
+| `GsaKLAbsOBdg` | `` | 2122 | 144 |  |
+| `LUgQujdonZv` | `` | 2136 | 103 | Tool, Backpack |
+| `JZnBLbbGcV` | `` | 2141 | 70 | Head, HumanoidRootPart |
+| `fmCvThONC` | `` | 2144 | 476 | Tool, Head, Humanoid |
+| `ShaxnsdJm` | `` | 2171 | 53 | [KillAll]  |
+| `AoIlRkSHjl` | `` | 2178 | 7269 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `eVIMfPHN` | `` | 2200 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 2273 | 673 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 2314 | 231 |  |
+| `sUWKeyOQb` | `` | 2326 | 154 |  |
+| `HMbGDLcuEhA` | `` | 2359 | 12 |  |
+| `gWtLqzSsb` | `` | 2361 | 26 | ACS_Engine, Events |
+| `vTZbuPxiaOxR` | `name` | 2363 | 25 | Network |
+| `OzaQpCfKpEj` | `text` | 2364 | 85 | TextLabel |
+| `kzuUkcIOzek` | `text, leSsFtgz` | 2373 | 133 | TextButton, UICorner |
+| `dTtFiOFoFG` | `text, default, leSsFtgz` | 2385 | 537 | TextButton, UICorner, TextLabel, Frame |
+| `GsaKLAbsOBdg` | `` | 2417 | 101 |  |
+| `QkArTHMoVn` | `` | 2424 | 163 | Tool, ACS_Settings, Backpack |
+| `iYkkcKNYigc` | `tOVOlSmMUA` | 2428 | 82 | table |
+| `lVpKwVwe` | `model` | 2428 | 33 | Tool |
+| `piTfAghbDMOe` | `` | 2428 | 43 |  |
+| `WvGAqQwYc` | `` | 2429 | 359 | Humanoid, Head, NPC, Model |
+| `OBhuNlYFs` | `model, SnCBhuSGNak` | 2431 | 126 | Humanoid, Head |
+| `PaiDniCOx` | `ZDQjjOMfp` | 2437 | 415 | ChangeDoor, [Mission] no ChangeDoor in this map, EnterableDoor, [Mission] no doors in this |
+| `vBMgHAZcJL` | `ZDQjjOMfp` | 2448 | 152 | ShoutNPC, [Mission] no ShoutNPC in this map, NPC, [Mission] no NPCs in this map, Humanoid, |
+| `JtGuktHcvEl` | `model` | 2462 | 181 | Model, Humanoid, Highlight, ACS_ESP |
+| `kJIolhREzA` | `` | 2480 | 5395 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `nSrZZRIq` | `text` | 2494 | 365 | Frame, UICorner, UIStroke, TextLabel |
+| `eVIMfPHN` | `` | 2523 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 2600 | 673 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 2641 | 231 |  |
+| `oaKEicxunL` | `parentPage, titleText, defaultState, leSsFtgz` | 2650 | 832 | TextButton, Card, UICorner, UIStroke, TextLabel, Frame |
+| `sUWKeyOQb` | `` | 2687 | 154 |  |
+| `viopCaklNF` | `` | 2718 | 5333 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `eVIMfPHN` | `` | 2738 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 2811 | 673 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 2852 | 231 |  |
+| `sUWKeyOQb` | `` | 2864 | 154 |  |
+| `PbssbHnEWbtY` | `parent, text, default, leSsFtgz` | 2895 | 765 | TextButton, Toggle, UICorner, UIStroke, TextLabel, Frame, Pill, Knob |
+| `GsaKLAbsOBdg` | `` | 2916 | 144 |  |
+| `xqyFlEQYQEM` | `` | 2924 | 87 | function, requestShot, table, number |
+| `fmCvThONC` | `` | 2926 | 295 | Lobby, Head, Humanoid, bullet, single |
+| `ShaxnsdJm` | `` | 2940 | 53 | [KillAll]  |
+| `BGIuhifTd` | `` | 2947 | 4815 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `eVIMfPHN` | `` | 2967 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 3051 | 673 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 3092 | 231 |  |
+| `sUWKeyOQb` | `` | 3104 | 154 |  |
+| `PbssbHnEWbtY` | `page, xgooKOdfEt, default, leSsFtgz` | 3135 | 687 | TextButton, _Toggle, UICorner, TextLabel, Frame |
+| `RAdplIuK` | `` | 3154 | 101 |  |
+| `EvyQvictc` | `` | 3159 | 224 | ReplicatedStorage, HumanoidRootPart, Humanoid, Head, Torso |
+| `IzwwLbPIly` | `` | 3172 | 5079 | ReplicatedStorage, CoreGui, Players, TweenService, Lighting, UserInputService, RunService, |
+| `eVIMfPHN` | `` | 3192 | 151 |  |
+| `SHktJfsrG` | `tabName, tabIconId` | 3276 | 673 | TextButton, TabBtn, UICorner, ImageLabel, TabIcon, rbxassetid://6031075931, TextLabel, Tab |
+| `SxtqHUFA` | `` | 3317 | 231 |  |
+| `sUWKeyOQb` | `` | 3329 | 154 |  |
+| `PbssbHnEWbtY` | `parent, text, default, leSsFtgz` | 3360 | 778 | TextButton, Toggle, UICorner, UIStroke, TextLabel, Frame, Pill, Knob |
+| `GsaKLAbsOBdg` | `` | 3381 | 144 |  |
+| `keSTKJHaOKO` | `` | 3392 | 81 | Backpack |
+| `uaQhwlEXkF` | `QhXUTruDVkk` | 3396 | 54 | Handle, BasePart, HumanoidRootPart |
+| `aRFvfdDI` | `` | 3398 | 251 | Humanoid, Head |
+
+### 3.6 ข้อความ UI ทั้งหมด
+`MagicAlay Hub`, `Notification Message`, `Enter Key...`, `Settings & Game Info`, `Loading Map...`, `Players in server: `, `Place ID: `, `UI Size Scaling (à¸à¸£à¸±à¸à¸à¸à¸²à¸à¸«à¸à¹à¸²à¸à¸­ UI)`, `100%`, `80%`, `90%`, `110%`, `120%`, `Saved Key Data`, `Reset Key`, `MagicAlay`, `Development by sky`, `Development by Aek`, `@`, `Execute Script`, `Do you want to run this script?`, `Cancel`, `Run Script`, `Are you sure you want to run [`, `Search scripts...`, `Development by Sky`, `  Target Part: Head`, `  Target Part: `, `  ESP Color: Red`, `  ESP Color: Green`, `  ESP Color: Blue`, `  ESP Color: Yellow`, `MAGICALAY HUB`, `now`, `â¼`, `MagicAlay ðª`, `Tycoon : Lemon Stand`, `[FPS] Gun Grounds FFA`, `City Thailand 2`, `GluePiece`, `FreeFireMax`, `Swat Simulator`, `Sell Lemons`, `Murder Duels`, `Aura Edit Arena`, `Fortline`
+
+### 3.7 ชื่อ Instance ที่ตั้งด้วย .Name
+`MagicAlay_Ultra_IOS_GUI`, `HubUIScale`, `iOSNotificationBanner`, `UIBlurEffect`, `IntroOverlay`, `IntroLogo`, `MainFrame`, `iOSLoginModal`, `iOSEdgeDockBar`, `EdgeToggleButton`, `DockSettingsIcon`, `iOSSettingsModal`, `SettingsScroll`, `GameWidget`, `HeaderBar`, `PagesFolder`, `BottomDock`, `TabIndicator`, `TabButtonContainer`, `UserProfileFrame`, `ProfileAvatar`, `DisplayNameLabel`, `UsernameLabel`, `ModalOverlay`, `ModalCard`, `TabIcon`, `TabLabel`, `SearchFrame`, `SearchBox`, `CardsContainer`, `CardImg`, `GameTitle`, `GameDesc`, `CreditsScroll`, `MagicAlay_IOS_Sidebar_GUI`, `NotificationHolder`, `Sidebar`, `iOSFloatButton`, `MagicAlayESP`, `HealthTagGui`, `HealthLabel`, `DragHeader`, `Pill`, `Knob`, `iOSNotificationSystem`, `NotificationContainer`, `iOSBanner`, `TopPill`, `ContentHolder`, `AppIcon`, `AppHeader`, `TimeLabel`, `Title`, `Message`, `ACS_ESP`, `MagicAlayOfficial`
+
+### 3.8 ชื่อ child/remote ที่ค้นหา (FindFirstChild/WaitForChild)
+`PlayerGui`, `UIBlurEffect`, `iOSLoginModal`, `GameTitle`, `Remotes`, `MagicAlay_IOS_Sidebar_GUI`, `InGameScreen`, `MoblieControls`, `Humanoid`, `Head`, `HumanoidRootPart`, `MagicAlayESP`, `HealthTagGui`, `HealthLabel`, `Mobs`, `Enemies`, `SafeAutoSellUI`, `HalloweenTokenFolder`, `Tokens`, `PumpkinBoss`, `DamagePlatforms`, `DamagePlatform`, `TokenTemplate`, `House`, `DoorFolder`, `Door`, `DoorPart`, `ProximityPrompt`, `Events`, `OpenCrateBaht`, `Combat_Event`, `Weapon_Event`, `Module`, `Hitbox`, `Backpack`, `RemoteEvent`, `AttackRemote`, `Tool`, `Eventos`, `WeaponFired`, `WeaponHit`, `WeaponReloadRequest`, `Shop`, `WeaponsSystem`, `ACS_Engine`, `Network`, `ACS_Settings`, `MagicAlayOfficial`, `Lemon Stand`, `ShootReplicate`, `Characters`, `Torso`, `Handle`
+
+### 3.9 remote ที่ถูกเรียก (FireServer/InvokeServer)
+`iHfPCgmcte:FireServer`, `UGpCWOzVSK:FireServer`, `Shop_Event:FireServer`, `dAFgOBDnDVc:FireServer`, `aRjOmGILKP:FireServer`, `tlkQCoRqka:FireServer`, `UI_Event:FireServer`, `zYxaAVIT:FireServer`, `bcKoWbZBkq:FireServer`, `yfciRPZfV:FireServer`, `AcessId:InvokeServer`, `yMEwCxid:FireServer`, `bvCQPAXkDTmO:FireServer`, `Damage:InvokeServer`, `HitEffect:FireServer`, `WakeIncomeStream:InvokeServer`, `Upgrade:InvokeServer`, `LLzqEDNi:FireServer`, `ZZuXZybxXPgf:FireServer`, `sMcCmPiKR:FireServer`, `nsvuOsUR:FireServer`, `KlxqomjVBZk:FireServer`
+
+### 3.10 สีที่ใช้ (Color3.fromRGB, จำนวนครั้ง)
+`(255,255,255)` x198, `(170,175,195)` x34, `(60,60,70)` x15, `(25,25,32)` x14, `(140,145,165)` x12, `(150,155,175)` x9, `(12,12,18)` x8, `(150,150,180)` x7, `(52,199,123)` x7, `(10,132,255)` x5, `(52,199,89)` x5, `(48,209,88)` x4, `(160,165,185)` x4, `(200,200,220)` x4, `(230,230,240)` x4, `(120,120,130)` x4, `(20,20,28)` x3, `(255,69,58)` x3, `(20,20,26)` x3, `(15,15,20)` x3, `(18,18,26)` x2, `(120,125,145)` x2, `(50,52,68)` x2, `(30,30,40)` x2, `(255,50,50)` x2, `(60,200,110)` x2, `(80,80,100)` x2, `(180,185,210)` x2, `(15,15,22)` x1, `(35,38,55)` x1, `(180,185,205)` x1, `(120,125,165)` x1, `(16,16,24)` x1, `(26,26,38)` x1, `(40,42,58)` x1, `(10,10,16)` x1, `(0,0,0)` x1, `(32,33,44)` x1, `(160,165,205)` x1, `(180,185,200)` x1, `(50,255,50)` x1, `(50,150,255)` x1, `(255,255,50)` x1, `(160,160,180)` x1, `(150,150,170)` x1, `(160,165,180)` x1, `(120,125,140)` x1, `(210,215,230)` x1, `(60,60,80)` x1, `(100,150,255)` x1, `(200,205,225)` x1, `(150,160,190)` x1, `(80,120,255)` x1, `(255,0,0)` x1, `(0,255,0)` x1, `(18,18,24)` x1, `(100,200,255)` x1, `(235,235,245)` x1
+
+### 3.11 event ที่ผูกไว้ (Connect)
+`MouseButton1Click` x43, `InputBegan` x24, `InputChanged` x21, `Changed` x19, `Completed` x16, `InputEnded` x12, `RenderStepped` x7, `Stepped` x3, `Heartbeat` x3, `FocusLost` x2, `Ended` x1, `Focused` x1, `PlayerAdded` x1, `PlayerRemoving` x1, `HealthChanged` x1, `JumpRequest` x1, `Idled` x1, `MouseButton1Down` x1, `MouseButton1Up` x1, `DescendantAdded` x1, `DescendantRemoving` x1, `Event` x1
+
+### 3.12 เมธอดที่ถูกเรียกบ่อย (อันดับ 40)
+`Play` x224, `Create` x223, `Connect` x163, `FindFirstChild` x114, `GetService` x88, `IsA` x27, `FireServer` x24, `WaitForChild` x23, `FindFirstChildOfClass` x22, `Destroy` x21, `GetPlayers` x14, `GetChildren` x13, `GetUserThumbnailAsync` x11, `GetDescendants` x8, `GetAttribute` x6, `FindFirstChildWhichIsA` x5, `InvokeServer` x4, `lower` x3, `find` x3, `Disconnect` x3, `GetPivot` x3, `GetTagged` x3, `JSONEncode` x2, `GetProductInfo` x2, `Wait` x2, `GetPlayerFromCharacter` x2, `JSONDecode` x1, `PreloadAsync` x1, `Fire` x1, `GetPropertyChangedSignal` x1, `Lerp` x1, `IsDescendantOf` x1, `WorldToViewportPoint` x1, `ChangeState` x1, `InputHoldBegin` x1, `InputHoldEnd` x1, `CaptureController` x1, `ClickButton2` x1, `gsub` x1, `Overlap` x1
+
+### 3.13 ตัวเลขเด่นที่พบในโค้ด (ทศนิยม/3 หลักขึ้นไป)
+`255` x614, `0.5` x168, `0.25` x65, `0.2` x61, `0.3` x47, `6031075931` x47, `100` x45, `150` x43, `175` x43, `310` x37, `170` x35, `195` x34, `0.4` x32, `0.92` x27, `155` x25, `145` x23, `1.2` x22, `0.85` x22, `0.35` x21, `120` x19, `165` x19, `180` x17, `0.95` x17, `140` x15, `0.7` x14, `0.15` x13, `125` x13, `200` x13, `160` x12, `0.88` x12, `303` x12, `199` x12, `185` x11, `110` x10, `0.1` x10, `230` x10, `0.75` x9, `0.93` x9, `245` x9, `130` x8, `0.45` x8, `490` x8, `0.8` x7, `240` x7, `0.78` x7, `123` x7, `220` x6, `2.5` x6, `302` x6, `0.9` x6, `210` x6, `1.1` x5, `132` x5, `209` x4, `1.5` x4, `3.5` x4, `0.05` x4, `270` x3, `401` x3, `205` x3
+
+### 3.14 ไฟล์/ค่าที่เก็บในเครื่อง
+- `MagicAlay_SavedKey.txt` (เก็บคีย์ที่กรอก)
+- `MagicAlay_TrackingCache.json` (นับจำนวนครั้งที่รันของแต่ละ UserId)
+- ปุ่ม `Reset Key`, `Saved Key Data` ในหน้า Settings & Game Info
+- ไอคอน/เสียง: `rbxassetid://111174530730534`, `rbxassetid://6436188054`, `rbxassetid://91660275693179`, `103143683174616`, `9405930424`
+
+---
+## 4. ไฟล์ D: WeAreDevs obfuscator (obfuscated_script-1791570804973)
+
+- obfuscator: WeAreDevs v1.0.0 (VM แบบ Ironbrew), ไฟล์ 177 KB, ตารางสตริง 940 รายการ, อ่านออก 123 รายการ, ไบนารี 816 รายการ
+- ระบบกันแก้: `Tamper Detected!`
+
+### 4.1 ฟังก์ชัน Roblox ที่เรียก
+`CFrame`, `Color3`, `Connect`, `Create`, `Destroy`, `Enum`, `EquipTool`, `FindFirstChild`, `FindFirstChildOfClass`, `FireServer`, `GetChildren`, `GetPlayers`, `GetService`, `Instance`, `IsA`, `Play`, `TweenInfo`, `UDim`, `UDim2`, `Vector3`, `WaitForChild`, `game`, `gethui`, `sethiddenproperty`, `syn`, `task`, `tick`
+
+### 4.2 ฟังก์ชันมาตรฐาน Lua
+`__gc`, `__index`, `__len`, `__metatable`, `byte`, `char`, `concat`, `error`, `floor`, `gmatch`, `gsub`, `ipairs`, `math`, `pairs`, `pcall`, `random`, `remove`, `setmetatable`, `string`, `table`, `tonumber`, `tostring`, `unpack`
+
+### 4.3 สตริงสุ่ม (น่าจะเป็นคีย์/ชื่อภายใน VM) 44 ตัว
+`0IWLPmqXWGwBn`, `1gmZRyE73FjfkW`, `3lkmPqUkNGuqPV`, `4FY0Xv9ejgdQ`, `4gHLEVaxxFshw`, `5tTQ3n7eSAIL`, `73hLnGK6yQYTW`, `7VLZlGpyV2xb2o`, `AVMmxXUq718L7`, `CJshWNO5iJdz7`, `CQrfaZ7z9K0Tjz`, `EmESMOdBHt8R`, `GF0BnYzFZ2IAu7`, `GTM5Pe6KsM21Rk`, `Go5QRJkeD1O4n`, `H2x0hdiuAryoC`, `J52reUa6unAFK`, `K4q3aFp6H2kI`, `O0cliv66THPaV`, `OOTdCcrLx1k2m7`, `QAtWG3DMpVYdHg`, `S8u2pBznEIX9`, `UJpuE0YVZeBH4X`, `UfcEEhWS1SAl`, `UjZuLBoNs5JTm`, `VcC1O7PYjIfhw`, `VpJy9PowWLNYY`, `Wxy0gpPaQ9hIow`, `YEh9Jfg77MjTC`, `ajaJr4Z1PDS7`, `bRwGUGYtI41Jx`, `d0IHEM4LmsMpHx`, `fiE2IE25b8ashv`, `gWN4Gu6gamghUs`, `kBWxVH5kqSNFvb`, `nX61MLFUDYPHw`, `oKgSqNRUBiaV6O`, `oodV1ZsHzu`, `pVmui10l5hpaH`, `sOminZtkUaum51`, `u8hp4JX8in1X`, `vRox0Xr0gPTcKI`, `vnjSt4Q3HERlf`, `zBa00QpFOKfZ2v`
+
+### 4.4 ตัวแปรของ VM
+- `B` ตารางสตริงเข้ารหัส, `t(n)` ดึงสตริง (ออฟเซ็ต 36339), ตัวอักษร base64 (`t`) / base85 (`c`) สลับตาราง
+- `F`=math.floor, `f`=table.insert, `i`=string.char, `a`=string.sub, `U`=table.concat, `R`=string.len
+- ขั้นตอน: สลับช่วงตำแหน่ง 3 ช่วงใน B -> ถอด `x`=base64 / `B`=base85 -> ใช้เป็นค่าคงที่ของ VM
+
+---
+## 5. ไฟล์ E: Luraph (Lib_5_5_0.lua)
+
+- Luraph Obfuscator v15.1, ไฟล์ 670,900 ไบต์, 3 บรรทัด, payload เข้ารหัส `LPH:` ยาว 533,256 ตัวอักษร (ตัวแปร `aj`)
+- ใช้ `buffer.*`, `table.create`, `bit32`, `coroutine`, `getfenv/setfenv`, `string.pack/unpack` (Luau)
+- ไม่มีสตริงอ่านได้นอก payload จึงบอกตัวแปรไม่ได้
+
+---
+## 6. ตารางเทียบข้ามไฟล์
+
+| ความหมาย | A (VM) | B (abacktools) | C (bundle __12_) | C (bundle _7_) |
+|---|---|---|---|---|
+| ReplicatedStorage | const | `ReplicatedStorage` | `rmaCFQsMK` | `m` |
+| CoreGui | const | `CoreGui` | `GiwwaIbBQAQ` | `A` |
+| Players | const | `Players` | `WpEsAhZH` | `W` |
+| TweenService | const | `TweenService` | `yaEHMGDQ` | `p` |
+| Lighting | const | `Lighting` | `mkkGjGLGxk` | `P` |
+| UserInputService | const | `UserInputService` | `dFVjPfXnJ` | `F` |
+| RunService | const | `RunService` | `miiTFMGsVb` | `b` |
+| Workspace | const | `Workspace` | `VSULWMgIl` | `E` |
+| LocalPlayer | - | `LocalPlayer` (เดิม `_i`) | `DbMurqdeP` | `y` |
+| Camera | - | `Camera` (เดิม `_j`) | `cnCQuLVL` | `u` |
+| ชื่อ GUI | MagicAlay_IOS_Sidebar_GUI | MagicAlay_IOS_Sidebar_GUI | MagicAlay_Ultra_IOS_GUI | MagicAlay_IOS_Sidebar_GUI |
+| สวิตช์ฟาร์ม | _G_AutoFarmClose | autoFarmClose (`_ka`) | - | - |
+| สวิตช์สวมอาวุธ | _G_AutoEquip | autoEquip (`_la`) | - | - |
+| อาวุธที่เลือก | _G_SelectedWeapon | selectedWeapon (`_ma`) | - | - |
+| ตีวงกว้าง | _G_AutoHitRange | autoHitRange (`_oa`) | - | - |
+---
+## 7. ภาคผนวก: ตัวแปร/ตัวระบุเพิ่มเติมแบบครบทุกตัว (ดึงด้วยการแยก token ทั้งไฟล์)
+
+ส่วนนี้ครอบคลุมสิ่งที่ตารางก่อนหน้ายังไม่มี: พารามิเตอร์ฟังก์ชันทุกตัว (รวมฟังก์ชันไม่มีชื่อ), ตัวแปรลูป, ตัวระบุที่ไม่ได้ประกาศ (global/builtin), property ที่ตั้งค่า, เมธอดที่เรียก, สตริงและตัวเลขทุกตัว "อ้างถึง" คือจำนวนครั้งที่ชื่อนั้นปรากฏ (ชื่อซ้ำกันในคนละ scope จะรวมกัน)
+
+### 7.A.1 ตัวแปรที่ประกาศทั้งหมดของ bundle __12_ (606 ตัว)
+
+| ตัวแปร | ชนิด | บรรทัดแรก | ถูกอ้างถึง (ครั้ง) |
+|---|---|---|---|
+| `x` | พารามิเตอร์ | 10 | 6 |
+| `n` | พารามิเตอร์ | 10 | 2 |
+| `exp` | local | 13 | 3 |
+| `mantissa` | local | 14 | 2 |
+| `s` | พารามิเตอร์ | 18 | 2 |
+| `thing` | local | 20 | 5 |
+| `thing2` | local | 21 | 3 |
+| `counter` | local | 22 | 4 |
+| `temp` | local | 25 | 3 |
+| `lmSwuScdl` | local | 27 | 3 |
+| `rmaCFQsMK` | local | 28 | 21 |
+| `GiwwaIbBQAQ` | local | 29 | 30 |
+| `WpEsAhZH` | local | 30 | 50 |
+| `yaEHMGDQ` | local | 31 | 233 |
+| `mkkGjGLGxk` | local | 32 | 30 |
+| `dFVjPfXnJ` | local | 33 | 26 |
+| `miiTFMGsVb` | local | 34 | 26 |
+| `VSULWMgIl` | local | 35 | 53 |
+| `NUWtBGmwAITP` | local | 36 | 3 |
+| `fMrccVdkDb` | local | 37 | 2 |
+| `OTIIHDks` | local | 38 | 4 |
+| `DbMurqdeP` | local | 39 | 132 |
+| `cnCQuLVL` | local | 40 | 49 |
+| `PMpYfWsE` | local | 41 | 6 |
+| `PbROqMExSckA` | local | 42 | 3 |
+| `ElYwRZSzIqJC` | local | 43 | 2 |
+| `ZsRQkHfMJDTH` | local | 44 | 2 |
+| `HQtfemZY` | local | 45 | 2 |
+| `kTxJgmmG` | local | 46 | 4 |
+| `OLXvNmjL` | local | 47 | 4 |
+| `ttZmSKeeyS` | local | 48 | 2 |
+| `FdgNbduHNhf` | local | 49 | 8 |
+| `zaFmgdeV` | ฟังก์ชัน local | 50 | 13 |
+| `soundId` | พารามิเตอร์ | 50 | 2 |
+| `BgpRlhkJQ` | local | 50 | 73 |
+| `rMUACmiaj` | local | 55 | 4 |
+| `shdwZUfoYRFJ` | ฟังก์ชัน local | 56 | 2 |
+| `UIQTjNYMo` | พารามิเตอร์ | 56 | 7 |
+| `LwekbajIxyFZ` | local | 56 | 3 |
+| `WCDmTsXezgX` | local | 57 | 2 |
+| `fKNOhnnQYPzd` | local | 57 | 1 |
+| `TCkRNfGF` | local | 58 | 2 |
+| `QkyjeeZzyoK` | local | 59 | 2 |
+| `kEqqDlXVJ` | local | 60 | 2 |
+| `qAocsLjjhWV` | local | 61 | 3 |
+| `yBQIyFVWpVp` | ฟังก์ชัน local | 62 | 2 |
+| `VwKFhoiA` | local | 62 | 7 |
+| `VglCXTDoLa` | local | 63 | 22 |
+| `kkeLDTEZ` | local | 64 | 3 |
+| `vjKdxhqKJA` | local | 66 | 5 |
+| `gqlKmiZcCIc` | local | 70 | 98 |
+| `ibmjCBBrkQ` | local | 73 | 7 |
+| `nfkjgJUvvie` | local | 74 | 2 |
+| `fsbMljUO` | local | 75 | 2 |
+| `hGsEnvhUPLc` | ฟังก์ชัน local | 76 | 7 |
+| `imageLabel` | พารามิเตอร์ | 76 | 3 |
+| `assetId` | พารามิเตอร์ | 76 | 2 |
+| `VHusqqkF` | ฟังก์ชัน local | 77 | 3 |
+| `text` | พารามิเตอร์ | 77 | 43 |
+| `yliwVRvE` | ฟังก์ชัน local | 77 | 2 |
+| `key` | พารามิเตอร์ | 77 | 2 |
+| `zdyCFPFzMB` | ฟังก์ชัน local | 77 | 2 |
+| `IDShmoRDNG` | local | 77 | 2 |
+| `JyZEDuGPBfR` | local | 77 | 1 |
+| `vhuizLWe` | ฟังก์ชัน local | 78 | 2 |
+| `rpMdVIZim` | ฟังก์ชัน local | 78 | 5 |
+| `frame` | พารามิเตอร์ | 78 | 4 |
+| `handle` | พารามิเตอร์ | 78 | 5 |
+| `mJYIJZey` | local | 79 | 8 |
+| `OrhrSMdVyLpT` | local | 80 | 3 |
+| `ZXdihySEdLon` | local | 80 | 6 |
+| `input` | พารามิเตอร์ | 81 | 263 |
+| `oUlHsLjMgVp` | local | 85 | 66 |
+| `nYUMKovKvW` | local | 86 | 9 |
+| `mGFRyMZeHJ` | local | 88 | 22 |
+| `ojJvSpfoliz` | local | 94 | 3 |
+| `qcCOURhpula` | local | 95 | 6 |
+| `tmbzlmQSFNL` | local | 97 | 11 |
+| `dmzbPNfJV` | local | 101 | 11 |
+| `MYkhJDMnwwdh` | local | 106 | 15 |
+| `oIsCJGrnqq` | local | 112 | 16 |
+| `ZFsEUWuYu` | local | 119 | 4 |
+| `lgqxGgVcdMSS` | local | 120 | 4 |
+| `NQgdJSvjBYd` | ฟังก์ชัน local | 121 | 3 |
+| `vCehpanp` | local | 122 | 25 |
+| `uyvEmiFJjE` | local | 135 | 9 |
+| `SDMDYnYzI` | ฟังก์ชัน local | 145 | 15 |
+| `xgooKOdfEt` | พารามิเตอร์ | 145 | 15 |
+| `message` | พารามิเตอร์ | 145 | 6 |
+| `RSJeMjOdzb` | local | 146 | 60 |
+| `FfhiGGIhqTH` | local | 148 | 30 |
+| `smGoZQPyFwL` | local | 149 | 61 |
+| `oMnwaizQzWN` | local | 150 | 27 |
+| `eVIMfPHN` | ฟังก์ชัน local | 151 | 27 |
+| `GNqCvfaGL` | local | 151 | 3 |
+| `KXIITZLL` | local | 152 | 2 |
+| `BJqibWtp` | local | 153 | 2 |
+| `ODIbaaKGpRuB` | local | 156 | 3 |
+| `kDoEYWJd` | local | 157 | 8 |
+| `HGKMnrsuq` | local | 163 | 13 |
+| `fgiLRMCIFYPK` | local | 172 | 6 |
+| `lGPTTuJYFWkg` | local | 185 | 6 |
+| `qZqkWDkWaSN` | local | 186 | 6 |
+| `PJPByNvkCIS` | local | 187 | 23 |
+| `AhpNxlEwpBu` | local | 188 | 248 |
+| `cIoNbjyAes` | local | 194 | 24 |
+| `tCAlMuAeR` | local | 195 | 40 |
+| `YyGUdpOO` | local | 197 | 25 |
+| `OuvUxfurKT` | local | 203 | 4 |
+| `XeEOTjpdQst` | local | 205 | 10 |
+| `ulBIrCoy` | local | 209 | 4 |
+| `WQnxiEpdN` | local | 211 | 8 |
+| `gEzLSzSugqq` | local | 215 | 13 |
+| `mPPHkNgpdj` | local | 219 | 8 |
+| `ULWVmJirTp` | local | 221 | 16 |
+| `KfNxrtzpvO` | ฟังก์ชัน local | 230 | 4 |
+| `parent` | พารามิเตอร์ | 230 | 14 |
+| `CVNUVfddM` | พารามิเตอร์ | 230 | 6 |
+| `size` | พารามิเตอร์ | 230 | 7 |
+| `bgCol` | พารามิเตอร์ | 230 | 2 |
+| `leSsFtgz` | พารามิเตอร์ | 230 | 38 |
+| `customIconId` | พารามิเตอร์ | 230 | 4 |
+| `ZDQjjOMfp` | local | 230 | 34 |
+| `LFPervCle` | local | 242 | 7 |
+| `xGTGNvdv` | local | 251 | 23 |
+| `vSssaEKx` | ฟังก์ชัน local | 252 | 2 |
+| `MgKFiyoF` | ฟังก์ชัน local | 259 | 3 |
+| `gKGqTzebEyMT` | local | 259 | 4 |
+| `aBBWplVf` | local | 263 | 2 |
+| `_` | ตัวแปรลูป | 264 | 55 |
+| `offset` | ตัวแปรลูป | 264 | 2 |
+| `enterPressed` | พารามิเตอร์ | 265 | 2 |
+| `RFMmuwOshDZk` | local | 273 | 4 |
+| `AMrDLrpDZ` | local | 275 | 10 |
+| `SRMNSDarkdrj` | local | 280 | 7 |
+| `ZtnstTEbcchC` | local | 284 | 10 |
+| `PXcBghBdiIm` | local | 295 | 4 |
+| `uZZBrgCvDKnF` | local | 297 | 6 |
+| `xqHChYQzBGKs` | local | 300 | 11 |
+| `agztCRloac` | local | 306 | 6 |
+| `aOlnDwJwMIK` | ฟังก์ชัน local | 307 | 2 |
+| `FzJdVzESzuxq` | local | 312 | 18 |
+| `SvZkQIdU` | local | 319 | 3 |
+| `drvQHQbNDz` | local | 321 | 13 |
+| `gJZcusCHH` | local | 325 | 4 |
+| `MHWBlYQZ` | local | 327 | 9 |
+| `xeSklKePVMd` | local | 331 | 13 |
+| `MLnNWDDRIYNp` | local | 337 | 13 |
+| `JVCRZGsP` | local | 343 | 11 |
+| `xXerTbeBuA` | local | 349 | 7 |
+| `TFDjhlmmNM` | ฟังก์ชัน local | 350 | 2 |
+| `desc` | พารามิเตอร์ | 350 | 2 |
+| `defaultState` | พารามิเตอร์ | 350 | 9 |
+| `dWPLPhSTEQMJ` | local | 350 | 24 |
+| `AqsgNsWJ` | local | 357 | 4 |
+| `sibwtrrP` | local | 361 | 21 |
+| `XgSjLHgObgrd` | local | 372 | 11 |
+| `tbwawtcPF` | local | 383 | 13 |
+| `ZSRIZRydSi` | local | 392 | 61 |
+| `GeIwxseOqV` | local | 399 | 93 |
+| `EVSjfoNJA` | local | 406 | 10 |
+| `uRoKUlbG` | local | 410 | 11 |
+| `rvhrZAmp` | local | 416 | 16 |
+| `xhWVPijaocI` | ฟังก์ชัน local | 422 | 6 |
+| `xPos` | พารามิเตอร์ | 422 | 2 |
+| `TnsdxzkI` | local | 445 | 9 |
+| `oGVpBSQTB` | local | 449 | 11 |
+| `YXUvLoJpDU` | local | 455 | 13 |
+| `WzHGrdJWZ` | local | 469 | 8 |
+| `yNWxlWhbvdU` | local | 472 | 101 |
+| `YyJPcZjvUkD` | local | 477 | 124 |
+| `dILUOguEfj` | local | 485 | 40 |
+| `IvNHdlUpr` | local | 487 | 12 |
+| `eWRooWNJRyB` | local | 491 | 4 |
+| `zoatJcuLLEO` | local | 493 | 11 |
+| `rAOYJohFnYvo` | local | 498 | 90 |
+| `LEGMKZpNiaR` | local | 501 | 31 |
+| `PLdowkMmGYP` | local | 503 | 118 |
+| `zPeMeSLcOUKp` | local | 507 | 80 |
+| `vhiydVJp` | local | 511 | 10 |
+| `CZbDramLO` | local | 512 | 120 |
+| `TsBuhrTkxRb` | local | 518 | 120 |
+| `HhYEMrDDYqr` | local | 524 | 13 |
+| `GMLIKamP` | local | 528 | 17 |
+| `NKnVvVDfKL` | local | 533 | 10 |
+| `XdYYdQxQ` | local | 538 | 12 |
+| `SsaWZiWbncR` | local | 544 | 11 |
+| `WdjgctTW` | local | 549 | 11 |
+| `yFWqxhucIZkb` | local | 554 | 4 |
+| `PsropIjnX` | local | 555 | 3 |
+| `epIxpttXSfCc` | ฟังก์ชัน local | 556 | 2 |
+| `scriptTitle` | พารามิเตอร์ | 556 | 3 |
+| `executeCallback` | พารามิเตอร์ | 556 | 4 |
+| `FODiFktoePba` | ฟังก์ชัน local | 564 | 3 |
+| `sUWKeyOQb` | ฟังก์ชัน local | 569 | 20 |
+| `oTxjWIXgE` | local | 575 | 33 |
+| `fzAzsVybR` | local | 583 | 3 |
+| `bdZCXgvdS` | local | 588 | 30 |
+| `glYeJhluPWBC` | local | 589 | 30 |
+| `SHktJfsrG` | ฟังก์ชัน local | 590 | 41 |
+| `tabName` | พารามิเตอร์ | 590 | 41 |
+| `rawIconId` | พารามิเตอร์ | 590 | 2 |
+| `ECRpaYrM` | local | 590 | 139 |
+| `bULHLVRs` | local | 597 | 100 |
+| `lvpcWVjumF` | local | 605 | 131 |
+| `JaghVOGMyS` | local | 617 | 140 |
+| `SxtqHUFA` | ฟังก์ชัน local | 624 | 31 |
+| `tabData` | ตัวแปรลูป | 626 | 49 |
+| `lDXETeLNCzp` | ฟังก์ชัน local | 634 | 3 |
+| `pageFrame` | พารามิเตอร์ | 634 | 5 |
+| `mXtMfRBMVoS` | local | 634 | 9 |
+| `xgrFUNBMvwe` | local | 642 | 15 |
+| `zsMMTbLiVpUE` | local | 655 | 15 |
+| `VWSJMByV` | local | 667 | 3 |
+| `ITYWStywFam` | local | 670 | 3 |
+| `card` | ตัวแปรลูป | 671 | 6 |
+| `zDDPHJoPfW` | ฟังก์ชัน local | 673 | 3 |
+| `container` | พารามิเตอร์ | 673 | 2 |
+| `titleText` | พารามิเตอร์ | 673 | 7 |
+| `descText` | พารามิเตอร์ | 673 | 2 |
+| `placeId` | พารามิเตอร์ | 673 | 4 |
+| `fallbackIconId` | พารามิเตอร์ | 673 | 2 |
+| `wWoIkhREc` | local | 673 | 108 |
+| `clTcfPcbH` | local | 682 | 20 |
+| `wdBsFVrTJz` | local | 686 | 11 |
+| `USbPKdyB` | local | 696 | 12 |
+| `TEkIALhQCr` | local | 702 | 12 |
+| `qNRRNDGt` | ฟังก์ชัน local | 708 | 2 |
+| `wovmMEAD` | local | 708 | 13 |
+| `unYVufvRy` | local | 719 | 3 |
+| `hDNqLAsE` | ฟังก์ชัน local | 722 | 5 |
+| `roleTitle` | พารามิเตอร์ | 722 | 2 |
+| `devName` | พารามิเตอร์ | 722 | 2 |
+| `WTBxqZRYv` | local | 722 | 8 |
+| `EaRaqAflON` | local | 728 | 10 |
+| `hqSVpnqcaWpY` | local | 738 | 10 |
+| `VhrHJdng` | local | 750 | 2 |
+| `pkOonMzCCQKs` | local | 751 | 2 |
+| `KtkRixlJJ` | local | 752 | 2 |
+| `pDRxsWfDoD` | local | 753 | 2 |
+| `faGxDZlbpvy` | local | 754 | 2 |
+| `mCzPCLLKwlkk` | ฟังก์ชัน local | 755 | 2 |
+| `BixdbCiWddc` | local | 765 | 1 |
+| `IqMrkELB` | local | 766 | 21 |
+| `MNhmpTCRxVx` | local | 767 | 14 |
+| `PVRzJUzq` | local | 768 | 3 |
+| `hDxJQkdZqp` | local | 769 | 3 |
+| `cJocAEopQ` | local | 773 | 8 |
+| `nyFaDmtKSY` | local | 776 | 5 |
+| `YfqHOjazuMQ` | ฟังก์ชัน local | 779 | 2 |
+| `IxJbqIth` | local | 779 | 13 |
+| `NhUBkLMVfXIn` | local | 786 | 16 |
+| `LqrQSQYqG` | local | 800 | 11 |
+| `IptjIJzTkkRc` | local | 821 | 36 |
+| `hCjpTksw` | local | 822 | 19 |
+| `NScrGXIdJ` | local | 833 | 32 |
+| `aGrczowPO` | local | 834 | 24 |
+| `HBSOPRmktyy` | local | 834 | 48 |
+| `VkqgCjCHG` | local | 839 | 117 |
+| `COxgTFdsocA` | local | 856 | 48 |
+| `bGcZiMpe` | local | 869 | 32 |
+| `tabIconId` | พารามิเตอร์ | 892 | 18 |
+| `FdnleRWHaoiN` | local | 930 | 27 |
+| `wNTTmbIPfz` | local | 942 | 7 |
+| `YsUUIUBxa` | local | 943 | 5 |
+| `ksWMwFrFmYj` | local | 944 | 15 |
+| `LMhxbaIv` | local | 951 | 195 |
+| `aZTpGGNZqNKx` | local | 956 | 36 |
+| `HNuPxMRq` | local | 958 | 44 |
+| `LZYRTwrHIS` | local | 959 | 27 |
+| `FGQcXNnUfZrp` | local | 959 | 54 |
+| `xkIycVcP` | local | 960 | 16 |
+| `zemhIPmKqWW` | local | 961 | 40 |
+| `QspVBWOFE` | local | 967 | 32 |
+| `ygZFoLifUMTV` | local | 968 | 16 |
+| `cuMBYcxCWu` | local | 969 | 16 |
+| `ttDqkhlkAm` | local | 970 | 24 |
+| `XhxImyxdzwmb` | local | 971 | 16 |
+| `PbssbHnEWbtY` | ฟังก์ชัน local | 972 | 28 |
+| `default` | พารามิเตอร์ | 972 | 23 |
+| `WYSsmRDsSSl` | local | 985 | 61 |
+| `UjkVfkDfwGQ` | local | 995 | 58 |
+| `GsaKLAbsOBdg` | ฟังก์ชัน local | 1007 | 18 |
+| `TspQqRvopli` | ฟังก์ชัน local | 1013 | 4 |
+| `min` | พารามิเตอร์ | 1013 | 11 |
+| `max` | พารามิเตอร์ | 1013 | 6 |
+| `PqkzLtiaUNq` | local | 1013 | 6 |
+| `QrLgWwqkG` | local | 1034 | 15 |
+| `lDyglkoZa` | local | 1042 | 7 |
+| `reJMExpT` | ฟังก์ชัน local | 1049 | 3 |
+| `TCCEHOTEfEF` | local | 1049 | 2 |
+| `NbrfrEyT` | local | 1050 | 3 |
+| `LkVxZjWAEXN` | local | 1063 | 14 |
+| `rHyOhbVtB` | local | 1068 | 4 |
+| `scFytNyWLs` | local | 1071 | 3 |
+| `XDAcngLFLH` | local | 1072 | 4 |
+| `PzcujsBGV` | local | 1076 | 8 |
+| `tqsylmcwE` | local | 1077 | 10 |
+| `yzPoAdZto` | ตัวแปรลูป | 1078 | 85 |
+| `oiCDnTemOFaE` | local | 1078 | 29 |
+| `MCWEKstJVx` | พารามิเตอร์ | 1079 | 10 |
+| `bvkGOUfjVhE` | ตัวแปรลูป | 1080 | 23 |
+| `UhXUscLZ` | local | 1083 | 4 |
+| `RVNZytYFBS` | local | 1086 | 17 |
+| `qmuqKbHnZ` | local | 1091 | 4 |
+| `gSgzfannJ` | local | 1094 | 7 |
+| `Olgvtdiczv` | local | 1102 | 11 |
+| `ehNVFNmKUuWD` | local | 1109 | 4 |
+| `KuFPcQupr` | local | 1110 | 11 |
+| `TmmEBvpBbe` | local | 1114 | 14 |
+| `pcMpjuXrCGjq` | local | 1115 | 3 |
+| `FNWognqS` | local | 1115 | 1 |
+| `HQOUKxSuTq` | local | 1119 | 5 |
+| `PQiwhPQFGzyD` | local | 1120 | 4 |
+| `fwCIVKMLK` | local | 1121 | 7 |
+| `newHealth` | พารามิเตอร์ | 1123 | 5 |
+| `FnThjzwOjr` | local | 1123 | 3 |
+| `KtNYjNeTqKh` | local | 1126 | 22 |
+| `yFGtzNdr` | local | 1128 | 12 |
+| `utJgxYxjZt` | local | 1135 | 12 |
+| `part` | ตัวแปรลูป | 1152 | 3 |
+| `CZaPgOjYEws` | local | 1152 | 4 |
+| `self` | พารามิเตอร์ | 1155 | 3 |
+| `qpBADToC` | local | 1155 | 3 |
+| `DVHtwfbBJHP` | local | 1156 | 3 |
+| `mob` | ตัวแปรลูป | 1157 | 3 |
+| `HxFMVQxtxKK` | ฟังก์ชัน local | 1158 | 2 |
+| `OAQStUpz` | local | 1168 | 4 |
+| `qsoEMQEOYdc` | local | 1171 | 3 |
+| `pBBlqfqRDKG` | local | 1176 | 3 |
+| `hESOFSObKtBa` | local | 1177 | 9 |
+| `obj` | ตัวแปรลูป | 1179 | 31 |
+| `SVJECSZm` | local | 1204 | 9 |
+| `MmdXZrSpUjYr` | local | 1214 | 4 |
+| `cUNItUBferNE` | local | 1215 | 3 |
+| `BVUWsjWKQ` | local | 1215 | 3 |
+| `eRtHKYiGBya` | local | 1215 | 6 |
+| `AeCYZIVHGUH` | local | 1305 | 19 |
+| `yUzqRuDpKQpA` | local | 1307 | 7 |
+| `PNfkBcHEfIPE` | local | 1322 | 3 |
+| `LlojfkgLVPGm` | local | 1323 | 4 |
+| `wDisyoWFBmzg` | local | 1356 | 2 |
+| `vdZPpnAUd` | local | 1358 | 29 |
+| `SnCBhuSGNak` | local | 1360 | 33 |
+| `JLviKFzNN` | local | 1361 | 3 |
+| `xUcaTdNh` | local | 1362 | 3 |
+| `tokenObj` | ตัวแปรลูป | 1363 | 8 |
+| `BhrwKPjm` | local | 1363 | 12 |
+| `vwbJpReb` | local | 1369 | 2 |
+| `OYWCXEdOL` | local | 1374 | 3 |
+| `IOcJmFsmLyGb` | local | 1375 | 3 |
+| `nCriMGBkjP` | local | 1376 | 2 |
+| `SogJsLXxdEyR` | local | 1377 | 3 |
+| `FIAhaqXWPG` | local | 1378 | 3 |
+| `bjFKVGJWe` | local | 1379 | 9 |
+| `on` | พารามิเตอร์ | 1387 | 22 |
+| `kQvMiRko` | local | 1387 | 5 |
+| `oJxYfgZsKlJt` | local | 1388 | 5 |
+| `xDumMoJzX` | ฟังก์ชัน local | 1389 | 2 |
+| `iHfPCgmcte` | local | 1389 | 3 |
+| `i` | ตัวแปรลูป | 1390 | 5 |
+| `EGDhOcDVNiA` | local | 1391 | 3 |
+| `model1` | ตัวแปรลูป | 1392 | 2 |
+| `smRoglPA` | local | 1392 | 4 |
+| `nPcYMjQcOfCQ` | local | 1393 | 3 |
+| `fzZYvXpK` | local | 1394 | 7 |
+| `xTzggrOpwVW` | ฟังก์ชัน local | 1399 | 2 |
+| `MBKXZKYHVb` | local | 1399 | 3 |
+| `UGpCWOzVSK` | local | 1400 | 3 |
+| `EmayCDJROZsT` | ฟังก์ชัน local | 1403 | 2 |
+| `rSvLTQMIjt` | local | 1412 | 10 |
+| `NeTmKjlF` | local | 1413 | 9 |
+| `mbwCSkSUb` | local | 1415 | 41 |
+| `kDztbDuMMrsj` | local | 1416 | 9 |
+| `IgQEmqHpCOg` | local | 1421 | 9 |
+| `xtdrrsacE` | local | 1428 | 5 |
+| `SgnCjFcyZR` | ฟังก์ชัน local | 1433 | 6 |
+| `duration` | พารามิเตอร์ | 1433 | 4 |
+| `dNnkAQarqsyS` | local | 1434 | 18 |
+| `yNMuBmJQqGil` | local | 1441 | 2 |
+| `oZyegdNxfsqk` | local | 1443 | 6 |
+| `sNuJrkpE` | local | 1447 | 10 |
+| `MmsMKJDrE` | local | 1457 | 10 |
+| `xeYgzwab` | local | 1462 | 11 |
+| `aSYjajITEn` | local | 1471 | 14 |
+| `kKLYhzjUEg` | local | 1483 | 14 |
+| `SXFWUmYBPHK` | local | 1495 | 14 |
+| `mEqlzQny` | local | 1507 | 15 |
+| `ImHQxsyPs` | local | 1520 | 2 |
+| `NlTYfUdU` | local | 1528 | 3 |
+| `ZuwJgwJXWr` | ฟังก์ชัน local | 1529 | 3 |
+| `dScKrgnhO` | local | 1530 | 3 |
+| `KqCqVRqQ` | local | 1538 | 4 |
+| `ukVgaEjWVf` | local | 1538 | 3 |
+| `ceIHTaFrxQa` | local | 1542 | 94 |
+| `yFPYdwnlXFW` | local | 1543 | 4 |
+| `tjbkprNxNi` | local | 1544 | 6 |
+| `uNDeYzZtt` | local | 1682 | 7 |
+| `nNuFDYxfS` | local | 1683 | 8 |
+| `dSczesZl` | local | 1689 | 48 |
+| `rtwgBdJzFnrR` | local | 1699 | 10 |
+| `lFHdBIkkGe` | local | 1706 | 7 |
+| `jtoBhrrfedWy` | local | 1716 | 9 |
+| `QcVdaEGzTSDe` | local | 1722 | 22 |
+| `YHPwSXTZW` | local | 1731 | 9 |
+| `rTEetEPmM` | local | 1747 | 11 |
+| `QyHgPzMxt` | local | 1757 | 10 |
+| `hdixsGhXkd` | local | 1763 | 6 |
+| `OZUHgcCU` | local | 1768 | 4 |
+| `shgeElAYqJlf` | ฟังก์ชัน local | 1769 | 3 |
+| `list` | พารามิเตอร์ | 1775 | 4 |
+| `KiLXBKdxAz` | local | 1775 | 12 |
+| `AhRWchTigP` | local | 1791 | 11 |
+| `tIOdtzXTS` | local | 1800 | 7 |
+| `bSFQhRbo` | local | 1805 | 2 |
+| `OYLgyltWT` | local | 1807 | 11 |
+| `iJiGORApsWW` | local | 1820 | 5 |
+| `QBpCSgfEQdx` | local | 1822 | 2 |
+| `QBMlpajra` | local | 1831 | 6 |
+| `jNMFNZyoZlyY` | local | 1832 | 10 |
+| `RMzOYNiNR` | local | 1833 | 7 |
+| `VYbTqvFTckD` | local | 1834 | 6 |
+| `SlCNBqrcL` | local | 1835 | 4 |
+| `xnoOSfuRqecv` | local | 1838 | 2 |
+| `selected` | พารามิเตอร์ | 1839 | 2 |
+| `num` | พารามิเตอร์ | 1839 | 2 |
+| `RypfGPHONnd` | local | 1863 | 14 |
+| `ZfYwAHaNq` | local | 1869 | 14 |
+| `jTUiASCJV` | local | 1870 | 4 |
+| `displayName` | ตัวแปรลูป | 1871 | 6 |
+| `internalName` | ตัวแปรลูป | 1871 | 6 |
+| `HKOUnHErx` | ฟังก์ชัน local | 1873 | 4 |
+| `mPTjHIjUPy` | ฟังก์ชัน local | 1873 | 18 |
+| `name` | พารามิเตอร์ | 1873 | 4 |
+| `EVrgWgzeoSL` | local | 1873 | 2 |
+| `ZsdWoveksIHb` | local | 1877 | 2 |
+| `BdfMoctoR` | local | 1878 | 43 |
+| `zKdCoypI` | local | 1878 | 11 |
+| `phFbOXOLev` | local | 1878 | 3 |
+| `LzWWpaxRms` | ฟังก์ชัน local | 1880 | 4 |
+| `mwIWYYzHJkXP` | local | 1880 | 13 |
+| `dAFgOBDnDVc` | local | 1881 | 4 |
+| `aRjOmGILKP` | local | 1882 | 4 |
+| `QinphxBYF` | local | 1883 | 2 |
+| `pSLRMBUQyjM` | local | 1884 | 4 |
+| `UoIVIdLnDD` | local | 1885 | 4 |
+| `VocIsAJZRyQq` | ฟังก์ชัน local | 1886 | 2 |
+| `NRMRfgZmBpqT` | local | 1887 | 12 |
+| `umvbfGktKn` | ฟังก์ชัน local | 1888 | 2 |
+| `QhXUTruDVkk` | ตัวแปรลูป | 1890 | 25 |
+| `tlkQCoRqka` | local | 1891 | 3 |
+| `ttFaIqlNE` | local | 1897 | 9 |
+| `aKWXWFHH` | local | 1898 | 4 |
+| `ePcjBjuUks` | local | 1899 | 6 |
+| `loNpFoCDakTF` | local | 1900 | 19 |
+| `LdxgVfRzozB` | local | 1901 | 5 |
+| `UxDsOzgtkGe` | local | 1902 | 14 |
+| `IgCiMqRY` | local | 1917 | 2 |
+| `bpJSadWpsWH` | local | 1918 | 3 |
+| `MnjvnwUNt` | local | 1919 | 3 |
+| `kXFdgckfGj` | ฟังก์ชัน local | 1923 | 2 |
+| `cawfuAdFpk` | local | 2081 | 12 |
+| `lrMqeVhui` | local | 2100 | 12 |
+| `hiGtwxORHOA` | local | 2127 | 4 |
+| `zYxaAVIT` | local | 2128 | 2 |
+| `bcKoWbZBkq` | local | 2129 | 2 |
+| `yfciRPZfV` | local | 2130 | 2 |
+| `pQPOBLEXZyc` | local | 2131 | 3 |
+| `qdDxYqogYS` | local | 2132 | 4 |
+| `eiLiJQMHRKgP` | local | 2133 | 4 |
+| `KZVjxiiUiHNE` | local | 2135 | 4 |
+| `LUgQujdonZv` | ฟังก์ชัน local | 2136 | 2 |
+| `MpjMyXUNWtP` | local | 2136 | 15 |
+| `gytCNuihStKT` | local | 2137 | 18 |
+| `QkpYoJkho` | local | 2140 | 16 |
+| `UvFRFIShu` | local | 2140 | 2 |
+| `JZnBLbbGcV` | ฟังก์ชัน local | 2141 | 2 |
+| `fmCvThONC` | ฟังก์ชัน local | 2144 | 4 |
+| `yaUwukWS` | local | 2144 | 3 |
+| `RJNRAxNqsq` | local | 2145 | 2 |
+| `TQlNpsAuC` | local | 2146 | 2 |
+| `BGhYDnBAPY` | local | 2147 | 2 |
+| `ctbkOnJF` | local | 2150 | 14 |
+| `yjHktwixX` | local | 2151 | 6 |
+| `a` | พารามิเตอร์ | 2156 | 4 |
+| `tgt` | ตัวแปรลูป | 2156 | 7 |
+| `KOthBsTtseM` | local | 2156 | 4 |
+| `ncVhfgQyP` | local | 2159 | 10 |
+| `TaSZwUvarur` | local | 2160 | 7 |
+| `jInWYVeba` | local | 2161 | 14 |
+| `lmXQrVnJ` | local | 2167 | 2 |
+| `SmNZORJNqfG` | local | 2169 | 8 |
+| `NhRBEYYfU` | local | 2170 | 6 |
+| `ShaxnsdJm` | ฟังก์ชัน local | 2171 | 6 |
+| `dIkGSOLtqI` | local | 2175 | 2 |
+| `AoIlRkSHjl` | ฟังก์ชัน local | 2178 | 2 |
+| `VaIhAWNTm` | local | 2186 | 4 |
+| `rzSphbwTK` | local | 2189 | 5 |
+| `hxvAGkUK` | local | 2191 | 3 |
+| `r` | ตัวแปรลูป | 2192 | 2 |
+| `BPlBVTPRXitV` | local | 2357 | 4 |
+| `UgKperWLXALv` | local | 2358 | 2 |
+| `HMbGDLcuEhA` | ฟังก์ชัน local | 2359 | 7 |
+| `sLMQhRPulPWe` | local | 2360 | 41 |
+| `gWtLqzSsb` | ฟังก์ชัน local | 2361 | 2 |
+| `blQXHtZcUqJM` | local | 2361 | 3 |
+| `tOVOlSmMUA` | local | 2362 | 9 |
+| `vTZbuPxiaOxR` | ฟังก์ชัน local | 2363 | 3 |
+| `raHqNYwlIe` | local | 2363 | 3 |
+| `OzaQpCfKpEj` | ฟังก์ชัน local | 2364 | 1 |
+| `gZOObvyd` | local | 2364 | 20 |
+| `kzuUkcIOzek` | ฟังก์ชัน local | 2373 | 3 |
+| `dTtFiOFoFG` | ฟังก์ชัน local | 2385 | 6 |
+| `OMgDoLSvzn` | local | 2404 | 9 |
+| `zYehJbSgFb` | local | 2411 | 7 |
+| `TPkwIbTtc` | local | 2421 | 4 |
+| `eSeNIrVLt` | local | 2423 | 2 |
+| `QkArTHMoVn` | ฟังก์ชัน local | 2424 | 2 |
+| `axZEfGFmXy` | ตัวแปรลูป | 2425 | 32 |
+| `iYkkcKNYigc` | ฟังก์ชัน local | 2428 | 2 |
+| `lVpKwVwe` | ฟังก์ชัน local | 2428 | 4 |
+| `model` | พารามิเตอร์ | 2428 | 23 |
+| `lBYEMRxxKKKz` | ตัวแปรลูป | 2428 | 10 |
+| `piTfAghbDMOe` | ฟังก์ชัน local | 2428 | 2 |
+| `WvGAqQwYc` | ฟังก์ชัน local | 2429 | 2 |
+| `fdLEnfEEnVY` | local | 2429 | 7 |
+| `wRNXNVWss` | local | 2430 | 3 |
+| `OBhuNlYFs` | ฟังก์ชัน local | 2431 | 4 |
+| `wSNOOsAdJl` | ตัวแปรลูป | 2433 | 23 |
+| `nYKesSXvhaqx` | local | 2433 | 52 |
+| `PaiDniCOx` | ฟังก์ชัน local | 2437 | 3 |
+| `yMEwCxid` | local | 2437 | 5 |
+| `rcZZmvorZxRi` | local | 2438 | 4 |
+| `wglFodWL` | local | 2439 | 4 |
+| `thXsVDSt` | local | 2442 | 4 |
+| `vBMgHAZcJL` | ฟังก์ชัน local | 2448 | 3 |
+| `bvCQPAXkDTmO` | local | 2448 | 3 |
+| `QJLVBHaWFix` | local | 2449 | 3 |
+| `pass` | ตัวแปรลูป | 2450 | 1 |
+| `EIinOXmlmr` | local | 2452 | 2 |
+| `qUVIrBnvOz` | local | 2452 | 1 |
+| `cQCoJPOFMZd` | local | 2452 | 1 |
+| `vEzsAqznHAR` | local | 2452 | 1 |
+| `aohlFGRKTT` | local | 2452 | 2 |
+| `fJQJisXpvmk` | local | 2455 | 2 |
+| `iykyIUCAbX` | local | 2455 | 2 |
+| `OqMXHFbKhJ` | local | 2456 | 2 |
+| `nEBrYpKXAS` | local | 2459 | 6 |
+| `sbEoPYAkyU` | local | 2460 | 4 |
+| `QThrFIhIxz` | local | 2461 | 3 |
+| `JtGuktHcvEl` | ฟังก์ชัน local | 2462 | 4 |
+| `aIjokSlIHNRm` | local | 2472 | 3 |
+| `gpe` | พารามิเตอร์ | 2478 | 2 |
+| `kJIolhREzA` | ฟังก์ชัน local | 2480 | 2 |
+| `nSrZZRIq` | ฟังก์ชัน local | 2494 | 5 |
+| `gwrtdLBPMABw` | local | 2494 | 14 |
+| `HKTUjgfBmrmG` | local | 2500 | 2 |
+| `zdkCoMCCtFR` | local | 2502 | 4 |
+| `dcZmfqtPxxME` | local | 2506 | 8 |
+| `ojCeFQzXGHwM` | local | 2559 | 10 |
+| `oaKEicxunL` | ฟังก์ชัน local | 2650 | 3 |
+| `parentPage` | พารามิเตอร์ | 2650 | 2 |
+| `iDqItEvXV` | local | 2662 | 9 |
+| `aDdYDSdA` | local | 2666 | 7 |
+| `icHAuLHlSP` | local | 2671 | 2 |
+| `wetLWExY` | local | 2672 | 2 |
+| `vOzGrrdiNsTN` | local | 2673 | 2 |
+| `yWRICYWMJCW` | local | 2678 | 4 |
+| `SklGSbvU` | local | 2679 | 4 |
+| `RsmXfZCtC` | local | 2680 | 5 |
+| `mBHkOtzJX` | local | 2683 | 5 |
+| `viopCaklNF` | ฟังก์ชัน local | 2718 | 2 |
+| `LLzqEDNi` | local | 2920 | 2 |
+| `cpBKkWWbiw` | local | 2921 | 2 |
+| `xqyFlEQYQEM` | ฟังก์ชัน local | 2924 | 2 |
+| `dHDYYdqULtKa` | local | 2924 | 5 |
+| `ElwkEsfJAQf` | local | 2925 | 2 |
+| `wNFVZEwdsMU` | local | 2926 | 2 |
+| `wkiPQvtGoGAg` | local | 2927 | 3 |
+| `THpGyZFi` | local | 2929 | 5 |
+| `ZiZNxBsK` | local | 2929 | 1 |
+| `SblOBACRAHbW` | local | 2934 | 3 |
+| `dFVZWDfXSz` | local | 2937 | 9 |
+| `BGIuhifTd` | ฟังก์ชัน local | 2947 | 2 |
+| `page` | พารามิเตอร์ | 3135 | 2 |
+| `RAdplIuK` | ฟังก์ชัน local | 3154 | 3 |
+| `EvyQvictc` | ฟังก์ชัน local | 3159 | 2 |
+| `ZZuXZybxXPgf` | local | 3159 | 2 |
+| `BZdHInNl` | local | 3160 | 4 |
+| `bmxqFERbflx` | local | 3161 | 3 |
+| `HkHFzBLPLydg` | local | 3166 | 3 |
+| `IzwwLbPIly` | ฟังก์ชัน local | 3172 | 2 |
+| `tJKIodBqjMy` | local | 3385 | 10 |
+| `fpLjvMqTeBCr` | local | 3386 | 3 |
+| `sMcCmPiKR` | local | 3387 | 3 |
+| `nsvuOsUR` | local | 3388 | 3 |
+| `KlxqomjVBZk` | local | 3389 | 2 |
+| `VhLWubYkbzz` | local | 3390 | 4 |
+| `yjPttLxZ` | local | 3391 | 3 |
+| `keSTKJHaOKO` | ฟังก์ชัน local | 3392 | 2 |
+| `g` | ตัวแปรลูป | 3393 | 4 |
+| `uaQhwlEXkF` | ฟังก์ชัน local | 3396 | 2 |
+| `aRFvfdDI` | ฟังก์ชัน local | 3398 | 2 |
+| `ffbQEyIRWO` | local | 3412 | 3 |
+| `cplewQpJOK` | local | 3414 | 2 |
+| `ROgzNKKOvLV` | local | 3415 | 4 |
+
+สรุปชนิด: พารามิเตอร์ 54, local 452, ฟังก์ชัน local 78, ตัวแปรลูป 22
+
+### 7.A.2 ตัวระบุที่ไม่ได้ประกาศ (global/builtin) ของ bundle __12_ (53 ตัว)
+
+`UDim2` x671, `Enum` x651, `Instance` x532, `Color3` x392, `TweenInfo` x188, `UDim` x156, `task` x125, `game` x93, `pcall` x71, `_G` x70, `getgenv` x52, `syn` x35, `ipairs` x33, `gethui` x32, `math` x29, `pairs` x26, `tostring` x24, `table` x19, `ColorSequenceKeypoint` x18, `Vector3` x15, `CFrame` x13, `string` x11, `warn` x11, `ColorSequence` x9, `RL` x8, `os` x6, `isfile` x6, `Vector2` x5, `loadstring` x4, `writefile` x4, `load` x3, `readfile` x3, `unpack` x3, `require` x3, `fluxus` x2, `Krnl` x2, `type` x2, `setclipboard` x2, `toclipboard` x2, `delfile` x2, `fireproximityprompt` x2, `rawget` x2, `typeof` x2, `continue` x2, `request` x1, `http_request` x1, `Drawing` x1, `getrawmetatable` x1, `setreadonly` x1, `newcclosure` x1, `getnamecallmethod` x1, `filtergc` x1, `debug` x1
+
+### 7.A.3 property/key ที่ใช้ของ bundle __12_ (390 ตัว)
+
+`new` x1604, `fromRGB` x392, `Position` x389, `Size` x375, `Parent` x338, `BackgroundTransparency` x295, `Name` x237, `UserInputType` x224, `Font` x208, `TextXAlignment` x178, `Text` x171, `BackgroundColor3` x140, `CornerRadius` x131, `TextColor3` x124, `EasingStyle` x110, `EasingDirection` x110, `X` x106, `TextSize` x104, `Out` x100, `Y` x99, `Character` x93, `Visible` x88, `Left` x86, `Quart` x85, `wait` x71, `Color` x64, `Transparency` x60, `Touch` x56, `Thickness` x55, `GothamBold` x55, `TextTruncate` x50, `spawn` x48, `Scale` x46, `ZIndex` x45, `GothamMedium` x45, `MouseButton1Click` x43, `Offset` x40, `UserInputState` x38, `Image` x35, `MouseButton1` x35, `ImageColor3` x33, `CFrame` x31, `FieldOfView` x30, `SortOrder` x30, `AddToggle` x26, `AtEnd` x25, `Padding` x25, `InputBegan` x24, `Back` x24, `AutoButtonColor` x23, `protect_gui` x22, `TextTransparency` x22, `ScaleType` x22, `AbsolutePosition` x22, `HorizontalAlignment` x22, `Health` x22, `InputChanged` x21, `MouseMovement` x21, `Active` x21, `ScrollBarThickness` x21, `Page` x20, `Icon` x20, `Label` x20, `AbsoluteSize` x20, `Changed` x19, `End` x19, `Button` x19, `Soft` x19, `CurrentCamera` x18, `PlaceId` x17, `Magnitude` x17, `UserId` x16, `Completed` x16, `insert` x16, `HumanoidRootPart` x16, `ClipsDescendants` x15, `Title` x15, `LayoutOrder` x15, `LdxgVfRzozB` x14, `InputEnded` x12, `CanvasSize` x12, `AutomaticCanvasSize` x12, `AutomaticSize` x12, `BorderSizePixel` x12, `Humanoid` x12, `Callback` x12, `LocalPlayer` x11, `ThumbnailType` x11, `HeadShot` x11, `ThumbnailSize` x11, `DisplayName` x11, `ResetOnSpawn` x11, `Desc` x11, `In` x10, `vhiydVJp` x10, `Size100x100` x10, `Center` x10, `ViewportSize` x10, `clamp` x10, `Bounce` x10, `Rotation` x9, `ImageTransparency` x9, `Draggable` x9, `Fit` x9, `Close` x9, `head` x9, `Kill` x9, `ESP` x9, `ShootKA_Enabled` x8, `__SHOOTKA_LOOP` x8, `KeyCode` x8, `lower` x7, `RenderStepped` x7, `EspColor` x7, `phFbOXOLev` x7, `floor` x6, `AimPart` x6, `Heartbeat` x6, `AutoFarm_Enabled` x6, `Velocity` x6, `Open` x6, `FastAttack` x6, `Remote` x6, `RemoteEvent` x6, `hum` x6, `n` x6, `ArmedOnly` x6, `AutoFarmBoss_Enabled` x5, `BringChara` x5, `HoldAllItems` x5, `ToolName` x5, `ShootKA_HeldOnly` x5, `d` x5, `clock` x5, `KillNPC` x5, `KillPlayers` x5, `AKShot` x5, `delay` x4, `Right` x4, `PrimaryPart` x4, `SlimeGroupHunter` x4, `NoobyHunter` x4, `NoobGroupHunter` x4, `ThugHunter` x4, `EvilThugHunter` x4, `DuckHunter` x4, `SwordMasterHunter` x4, `CutieBossHunter` x4, `ShinoaHunter` x4, `CharaHunter` x4, `UnknownBossHunter` x4, `SansHunter` x4, `KyoHunter` x4, `AutoLightSword` x4, `AutoWarpToBoss` x4, `AutoRandom` x4, `AutoEquip` x4, `AttackAllBosses` x4, `AttackRange` x4, `AutoFruit` x4, `AutoMelee` x4, `AutoDefense` x4, `AutoStrength` x4, `TargetHeight` x4, `UI_Event` x4, `__SHOTEXTRA` x4, `Unit` x4, `origin` x4, `connect` x4, `ShootHub` x4, `MissionRunId` x4, `dist` x4, `Team` x4, `request` x3, `ScrollBarImageColor3` x3, `ScrollBarImageTransparency` x3, `TextWrapped` x3, `Silent` x3, `Wallbang` x3, `AutoCam` x3, `SkyHunter` x3, `ESPBox` x3, `ESPTracer` x3, `ESPHealth` x3, `Spin` x3, `SpinSpeed` x3, `ZigZag` x3, `InfiniteJump` x3, `NoClip` x3, `Stepped` x3, `CanCollide` x3, `Head` x3, `Angles` x3, `rad` x3, `Gotham` x3, `CharaPoint` x3, `Backpack` x3, `PlatformStand` x3, `__SHOTBASE` x3, `instance` x3, `id` x3, `Material` x3, `Enabled` x3, `M` x3, `LoopDelay` x3, `PerShot` x3, `Set` x3, `AKLoop` x3, `KillAllLoop` x3, `ldexp` x2, `frexp` x2, `log` x2, `WebhookUrl` x2, `__MAGICALAY_BUNDLE_LOADED` x2, `Message` x2, `PlaceholderText` x2, `PlaceholderColor3` x2, `FocusLost` x2, `Crop` x2, `FillDirection` x2, `IconImageAssetId` x2, `VerticalAlignment` x2, `AimbotSmooth` x2, `SpeedVal` x2, `huge` x2, `CameraMode` x2, `Classic` x2, `DevComputerCameraMode` x2, `CameraSubject` x2, `Adornee` x2, `FillColor` x2, `OutlineColor` x2, `FillTransparency` x2, `AlwaysOnTop` x2, `__namecall` x2, `Elastic` x2, `AnchorPoint` x2, `LightSwordPos` x2, `AddButton` x2, `AddSlider` x2, `AddDropdown` x2, `Shop_Event` x2, `sort` x2, `dir` x2, `charge` x2, `part` x2, `p` x2, `m` x2, `t` x2, `h` x2, `sid` x2, `pid` x2, `maxDist` x2, `configValues` x2, `dIkGSOLtqI` x2, `RecoilTilt` x2, `RecoilUp` x2, `RecoilLeft` x2, `RecoilRight` x2, `model` x2, `MissionKeysBound` x2, `Tycoon3` x2, `Remotes` x2, `ZiZNxBsK` x2, `abs` x1, `SoundId` x1, `Volume` x1, `Ended` x1, `fKNOhnnQYPzd` x1, `Size420x420` x1, `date` x1, `Url` x1, `Method` x1, `Headers` x1, `Body` x1, `JyZEDuGPBfR` x1, `remove` x1, `Focused` x1, `gsub` x1, `PlayerAdded` x1, `PlayerRemoving` x1, `Horizontal` x1, `Select` x1, `defer` x1, `GameTitle` x1, `find` x1, `InfoType` x1, `Asset` x1, `upper` x1, `Top` x1, `Code` x1, `Z` x1, `FNWognqS` x1, `From` x1, `To` x1, `HealthChanged` x1, `StudsOffset` x1, `TextStrokeTransparency` x1, `MaxHealth` x1, `WalkSpeed` x1, `JumpRequest` x1, `HumanoidStateType` x1, `Jumping` x1, `SafeAutoSellUI` x1, `MaxActivationDistance` x1, `HoldDuration` x1, `DisplayOrder` x1, `ukVgaEjWVf` x1, `Idled` x1, `MouseButton1Down` x1, `MouseButton1Up` x1, `AddLabel` x1, `DescendantAdded` x1, `DescendantRemoving` x1, `CharacterAdded` x1, `MaxTarget` x1, `CF` x1, `currentWeapon` x1, `UvFRFIShu` x1, `getWeaponForInstance` x1, `nextShotId` x1, `AmmoCapacity` x1, `Get` x1, `ZoomValue` x1, `Zoom2Value` x1, `AimRM` x1, `SpreadRM` x1, `DamageMod` x1, `minDamageMod` x1, `MinRecoilPower` x1, `MaxRecoilPower` x1, `RecoilPowerStepAmount` x1, `MinSpread` x1, `MaxSpread` x1, `AimInaccuracyStepAmount` x1, `AimInaccuracyDecrease` x1, `WalkMult` x1, `adsTime` x1, `MuzzleVelocity` x1, `camRecoilMod` x1, `gunRecoilMod` x1, `ncVhfgQyP` x1, `AcessId` x1, `Id` x1, `yzPoAdZto` x1, `CVNUVfddM` x1, `format` x1, `iykyIUCAbX` x1, `Damage` x1, `HitEffect` x1, `DepthMode` x1, `HighlightDepthMode` x1, `OutlineTransparency` x1, `H` x1, `N` x1, `J` x1, `B` x1, `MagicAlayOfficial` x1, `WakeIncomeStream` x1, `Purchases` x1, `Upgrade` x1, `cancel` x1, `dHDYYdqULtKa` x1, `bvkGOUfjVhE` x1, `getupvalue` x1, `effects` x1, `Barrage` x1, `Frost` x1, `Ricochet` x1, `firedAt` x1, `hitInstance` x1, `hitNormal` x1, `hitPos` x1, `isADS` x1, `isCharacterHit` x1, `kind` x1, `mode` x1, `ownerUserId` x1, `to` x1, `ZZuXZybxXPgf` x1, `Game` x1, `FireShot` x1, `direction` x1, `hitPosition` x1, `hitPart` x1, `shotId` x1, `clientTime` x1, `random` x1, `zero` x1, `Event` x1
+
+### 7.A.4 เมธอดที่เรียกของ bundle __12_ (45 ตัว)
+
+`Play` x224, `Create` x223, `Connect` x163, `FindFirstChild` x114, `GetService` x88, `IsA` x27, `FireServer` x24, `WaitForChild` x23, `FindFirstChildOfClass` x22, `Destroy` x21, `GetPlayers` x14, `GetChildren` x13, `GetUserThumbnailAsync` x11, `GetDescendants` x8, `GetAttribute` x6, `FindFirstChildWhichIsA` x5, `InvokeServer` x4, `lower` x3, `find` x3, `Disconnect` x3, `GetPivot` x3, `GetTagged` x3, `JSONEncode` x2, `GetProductInfo` x2, `Wait` x2, `GetPlayerFromCharacter` x2, `JSONDecode` x1, `PreloadAsync` x1, `Fire` x1, `GetPropertyChangedSignal` x1, `Lerp` x1, `IsDescendantOf` x1, `WorldToViewportPoint` x1, `ChangeState` x1, `InputHoldBegin` x1, `InputHoldEnd` x1, `CaptureController` x1, `ClickButton2` x1, `gsub` x1, `Overlap` x1, `Activate` x1, `PivotTo` x1, `UnequipTools` x1, `EquipTool` x1, `GetServerTimeNow` x1
+
+### 7.A.5 สตริงลิเทอรัลทั้งหมดของ bundle __12_ (461 ตัว)
+
+`https://discord.com/api/webhooks/<ซ่อน>`, `ReplicatedStorage`, `CoreGui`, `Players`, `TweenService`, `Lighting`, `UserInputService`, `RunService`, `Workspace`, `MarketplaceService`, `SoundService`, `HttpService`, `MagicAlay_SavedKey.txt`, `MagicAlay`, `https://discord.gg/eWZ7yHeQr`, `rbxassetid://111174530730534`, `rbxassetid://6436188054`, `rbxassetid://91660275693179`, `Sound`, `MagicAlay_TrackingCache.json`, `embeds`, `title`, `MagicAlay Hub`, `color`, `thumbnail`, `url`, `fields`, `name`, `Name`, `value`, ` (`, `)`, `inline`, `Number`, `Execution #`, `footer`, `text`, `%Y-%m-%d %H:%M:%S`, `Content-Type`, `application/json`, `POST`, `table`, `ScreenGui`, `MagicAlay_Ultra_IOS_GUI`, `PlayerGui`, `103143683174616`, `9405930424`, `rbxassetid://`, `ContentProvider`, `UIScale`, `HubUIScale`, `Frame`, `iOSNotificationBanner`, `UICorner`, `UIGradient`, `UIStroke`, `ImageLabel`, `rbxassetid://8215093320`, `TextLabel`, `Notification Message`, `UIBlurEffect`, `BlurEffect`, `iOSLoginModal`, `BindableEvent`, `IntroOverlay`, `IntroLogo`, `rbxassetid://140419294351439`, `MainFrame`, `TextBox`, `Enter Key...`, `TextButton`, `Access Granted`, `Passcode Verified Successfully!`, `%s+`, `admin`, `Access Denied`, `Incorrect Key! Enter: MagicAlay`, `Verify`, `Get Key`, `Key Link Copied`, `Get-Key link copied to clipboard!`, `Discord`, `Support Copied`, `Support Discord link copied!`, `iOSEdgeDockBar`, `ImageButton`, `EdgeToggleButton`, `8215093320`, `DockSettingsIcon`, `rbxassetid://87350324375899`, `iOSSettingsModal`, `Settings & Game Info`, `ScrollingFrame`, `SettingsScroll`, `UIListLayout`, `GameWidget`, `Loading Map...`, `Players in server: `, `Place ID: `, `rbxthumb://type=Asset&id=`, `&w=150&h=150`, `Camera Blur Effect`, `Toggle iOS Background Blur Effect`, `Setting Updated`, `Blur Effect: `, `ON`, `OFF`, `100%`, `80%`, `UI Scale`, `Adjusted UI size to 80%`, `90%`, `Adjusted UI size to 90%`, `Adjusted UI size to 100%`, `110%`, `Adjusted UI size to 110%`, `120%`, `Adjusted UI size to 120%`, `Saved Key Data`, `Reset Key`, `Key Reset`, `Saved key deleted! Please rejoin or restart.`, `HeaderBar`, `Development by sky`, `Development by Aek`, `Folder`, `PagesFolder`, `BottomDock`, `TabIndicator`, `TabButtonContainer`, `UserProfileFrame`, `ProfileAvatar`, `DisplayNameLabel`, `UsernameLabel`, `@`, `ModalOverlay`, `ModalCard`, `Execute Script`, `Do you want to run this script?`, `Cancel`, `Run Script`, `Are you sure you want to run [`, `]?`, `Script Executed`, `Executed [`, `] successfully!`, `TabBtn`, `TabIcon`, `TabLabel`, `Page`, `SearchFrame`, `SearchBox`, `Search scripts...`, `CardsContainer`, `Text`, `GameTitle`, `_Card`, `CardImg`, `GameDesc`, `CreditsScroll`, `Official Script Hub`, `Lead Developer`, `Aek`, `Core Developer`, `Sky`, `Development Support Team`, `Saisansk`, `Recommend`, `All Scripts`, `79159724721875`, `Credits`, `104769040369946`, `Remotes`, `MagicAlay_IOS_Sidebar_GUI`, `InGameScreen`, `MoblieControls`, `NotificationHolder`, `Sidebar`, `Development by Sky`, `rbxassetid://6031075931`, `Combat`, `Visuals`, `Player`, `iOSFloatButton`, `: `, `Head`, `  Target Part: Head`, `HumanoidRootPart`, `UpperTorso`, `LowerTorso`, `  Target Part: `, `Aimbot Lock`, `Humanoid`, `Aimbot Smoothness`, `Wallbang`, `BasePart`, `AutoCam`, `SkyHunter`, `  ESP Color: Red`, `  ESP Color: Green`, `  ESP Color: Blue`, `  ESP Color: Yellow`, `ESP Box`, `MagicAlayESP`, `Highlight`, `ESP Tracers`, `Line`, `Elimination`, `Successfully eliminated: `, `ESP Health Bar`, `HealthTagGui`, `BillboardGui`, `HealthLabel`, ` HP: `, `/`, `Spinbot`, `Spin Speed`, `ZigZag`, `WalkSpeed Slider`, `Infinite Jump`, `Player NoClip`, `HitboxMod`, `FireServer`, `Action`, `hit`, `BaconMode (Auto Farm)`, `Mobs`, `Enemies`, `SafeAutoSellUI`, `GuiObject`, `PopUp`, `popup`, `adgui`, `notice`, `DragHeader`, `Main`, `Settings`, `Toggle`, `Pill`, `Knob`, `HalloweenTokenFolder`, `Tokens`, `Model`, `PumpkinBoss`, `DamagePlatforms`, `DamagePlatform`, `TokenTemplate`, `Auto Farm Tokens`, `Auto Farm PumpkinBoss`, `House`, `Sell`, `DoorFolder`, `Door`, `DoorPart`, `ProximityPrompt`, `Events`, `OpenCrateBaht`, `Auto Sell`, `Auto Crate`, `iOSNotificationSystem`, `NotificationContainer`, `iOSBanner`, `TopPill`, `ContentHolder`, `AppIcon`, `AppHeader`, `MAGICALAY HUB`, `TimeLabel`, `now`, `Title`, `Notification`, `Message`, `Sans`, `sans`, `Chara`, `chara`, `Duck Boss`, `duck boss`, `Shinoa`, `shinoa`, `Cutie Boss`, `cutie boss`, `Sword Master`, `sword master`, `Unknown Boss`, `unknown boss`, `Kyo`, `kyo`, `VirtualUser`, `  `, ` [`, `]`, `Boss`, `Stats`, `Misc`, `Auto Farm Slime`, `Auto Farm Nooby`, `Auto Farm Noob`, `Auto Farm Thug`, `Auto Farm Evil Thug`, `Auto Teleport To Boss`, `Hunt Kyo`, `Hunt Sans`, `Hunt Chara`, `Hunt Shinoa`, `Hunt Unknown Boss`, `Hunt Duck Boss`, `Hunt Sword Master`, `Hunt Cutie Boss`, `Hold All Items`, `Item Status`, `Hold All Items Enabled`, `Hold All Items Disabled`, `Attack All Bosses`, `Combat Mode`, `Targeting all active bosses`, `Targeting stopped`, `Auto Equip Weapon`, `Cursed Scythe`, `Epic Sword`, `Youru`, `True Yorou`, `Elucidator`, `Dual Sword`, `Real Knife`, `True Knife`, `Saber`, `Bisento`, `Amethyst Scythe`, `Lighting Sword`, `Limitless`, `Black leg`, `OFA [Deku]`, `Select Weapon`, `Fast Attack`, `Attack Distance`, `Reset Stats (Beli)`, `Shop`, `Reset`, `Money`, `Auto Stats Devil Fruit`, `Auto Stats Melee`, `Auto Stats Defense`, `Auto Stats Sword/Strength`, `Auto Get Light Sword`, `Bring Chara`, `Auto Random Fruit`, `Boss Spawned`, ` is now available!`, `Boss Defeated`, ` was eliminated.`, ` `, `Hunter`, `Combat_Event`, `Weapon_Event`, `Module`, `Hitbox`, `Attack`, `Slash`, `Backpack`, `Tool`, `RemoteEvent`, `AttackRemote`, `slime`, `king slime`, `nooby`, `cutie noob`, `elite noob`, `king noob`, `thug`, `evil thug`, `Random Fruity`, `Add Stats`, `DevilFruit`, `1`, `Melee`, `Defense`, `Strength`, `System Ready`, `MagicAlay Hub loaded successfully.`, `Eventos`, `WeaponFired`, `WeaponHit`, `WeaponReloadRequest`, `WeaponsSystem`, `[KillAll] `, `STATE`, `Auto Kill`, `Weapon Kill`, `CollectionService`, `ACS_Engine`, `Network`, `ACS_Settings`, `-`, `NPC`, `ChangeDoor`, `[Mission] no ChangeDoor in this map`, `EnterableDoor`, `[Mission] no doors in this map`, `?`, `State`, `Open`, `Closed`, `Kick`, `Peak`, `[Mission] doors %d/%d`, `ShoutNPC`, `[Mission] no ShoutNPC in this map`, `[Mission] no NPCs in this map`, `Surrendered`, `[Mission] shout done`, `Autokill (H)`, `Armed Only`, `Kill NPCs`, `Kill Players`, `ESP Highlight (N)`, `Open All Doors (J)`, `Surrender All (B)`, `ACS_ESP`, `[Mission] ready in Main tab \| H kill / J doors / B surrender / N esp`, `MagicAlayOfficial`, `Tycoon : Lemon Stand`, `Card`, `LemonStand`, `Fast Income`, `Fast Income: ON`, `Fast Income: OFF`, `Auto Upgrade Lemon Stand`, `Lemon Stand`, `Auto Upgrade: ON`, `Auto Upgrade: OFF`, `ShootReplicate`, `Characters`, `function`, `requestShot`, `number`, `Lobby`, `bullet`, `single`, `_Toggle`, `Torso`, `Sniper`, `AWM`, `Handle`, `KillAll`, `[FPS] Gun Grounds FFA`, `Script by MagicAlay`, `City Thailand 2`, `GluePiece`, `FreeFireMax`, `Swat Simulator`, `Sell Lemons`, `Murder Duels`, `Aura Edit Arena`, `Fortline`, `Game Script`, `Game Detected`, `Found build for [`, `] - tap its card to run.`, `Auto Login`, `Saved passcode loaded automatically!`
+
+### 7.A.6 ตัวเลขลิเทอรัลทั้งหมดของ bundle __12_ (231 ค่า)
+
+`0` x1847, `1` x709, `255` x614, `0.5` x168, `12` x160, `14` x139, `16` x129, `8` x120, `10` x109, `18` x104, `24` x96, `34` x85, `2` x84, `20` x83, `60` x80, `32` x79, `3` x79, `48` x76, `9` x76, `44` x75, `28` x72, `36` x72, `25` x70, `26` x69, `50` x68, `11` x67, `54` x66, `5` x66, `0.25` x65, `22` x63, `33` x62, `46` x61, `0.2` x61, `78` x60, `45` x59, `49` x57, `15` x56, `40` x55, `52` x53, `6` x53, `89` x52, `39` x51, `4` x50, `21` x50, `0.3` x47, `7` x46, `67` x46, `30` x45, `29` x44, `62` x44, `58` x44, `47` x44, `66` x43, `42` x43, `175` x43, `13` x42, `70` x42, `100` x41, `86` x41, `38` x40, `80` x40, `19` x40, `43` x40, `68` x39, `150` x39, `65` x37, `55` x37, `310` x37, `59` x36, `56` x36, `27` x35, `170` x35, `17` x34, `195` x34, `95` x33, `0.4` x32, `81` x32, `72` x31, `76` x31, `82` x31, `23` x31, `84` x31, `99` x30, `64` x30, `53` x30, `92` x29, `37` x29, `71` x29, `75` x29, `69` x29, `87` x28, `90` x28, `57` x28, `74` x28, `61` x28, `35` x27, `51` x27, `0.92` x27, `73` x27, `41` x26, `155` x25, `31` x24, `91` x24, `88` x23, `97` x23, `145` x23, `96` x22, `1.2` x22, `63` x22, `0.85` x22, `0.35` x21, `83` x21, `93` x21, `165` x19, `85` x19, `180` x17, `94` x17, `0.95` x17, `77` x16, `120` x16, `98` x15, `140` x15, `79` x14, `0.7` x14, `0.15` x13, `125` x13, `200` x13, `160` x12, `0.88` x12, `303` x12, `199` x12, `185` x11, `0.1` x10, `230` x10, `0.75` x9, `0.93` x9, `245` x9, `130` x8, `0.45` x8, `490` x8, `110` x7, `0.8` x7, `240` x7, `0.78` x7, `123` x7, `220` x6, `2.5` x6, `302` x6, `0.9` x6, `210` x6, `1.1` x5, `132` x5, `209` x4, `1.5` x4, `3.5` x4, `0.05` x4, `270` x3, `401` x3, `205` x3, `0.82` x3, `320` x3, `260` x3, `2438` x2, `135` x2, `300` x2, `0.55` x2, `370` x2, `250` x2, `252` x2, `253` x2, `0.12` x2, `151` x2, `152` x2, `290` x2, `301` x2, `115` x2, `105` x2, `417.488556` x2, `171.070755` x2, `49.2427864` x2, `999999` x2, `0.6` x2, `340` x2, `900` x2, `0.001` x2, `8.5` x2, `235` x2, `65280` x1, `400` x1, `402` x1, `420` x1, `0.65` x1, `256` x1, `1.3` x1, `0.035` x1, `164` x1, `296` x1, `304` x1, `116` x1, `1.0` x1, `169` x1, `222` x1, `280` x1, `0.01` x1, `480` x1, `215` x1, `0.22` x1, `554.939148` x1, `29.1302795` x1, `630.229553` x1, `29.4552612` x1, `6.01364279` x1, `2148.53149` x1, `225` x1, `190` x1, `3000` x1, `0.03` x1, `2.0` x1, `0.96` x1, `0.28` x1, `100000` x1, `200000` x1, `12137249458` x1, `4503309821` x1, `394506555` x1, `93233198656969` x1, `102837194624695` x1, `79268393072444` x1, `120851538706364` x1, `106502313058092` x1, `14313259147` x1
+
+### 7.B.1 ตัวแปรที่ประกาศทั้งหมดของ bundle _7_ (ชื่อสั้น) (137 ตัว)
+
+| ตัวแปร | ชนิด | บรรทัดแรก | ถูกอ้างถึง (ครั้ง) |
+|---|---|---|---|
+| `m` | local | 1 | 1019 |
+| `A` | local | 1 | 691 |
+| `W` | local | 1 | 557 |
+| `p` | local | 1 | 401 |
+| `P` | local | 1 | 331 |
+| `F` | local | 1 | 343 |
+| `b` | local | 1 | 357 |
+| `E` | local | 1 | 201 |
+| `C` | local | 1 | 297 |
+| `N` | local | 1 | 235 |
+| `y` | local | 1 | 208 |
+| `u` | local | 1 | 144 |
+| `z` | local | 1 | 89 |
+| `Y` | local | 1 | 77 |
+| `O` | local | 1 | 43 |
+| `V` | local | 1 | 57 |
+| `q` | local | 1 | 33 |
+| `j` | local | 1 | 123 |
+| `k` | local | 1 | 118 |
+| `i` | local | 1 | 85 |
+| `Q` | ฟังก์ชัน local | 1 | 72 |
+| `S` | local | 1 | 51 |
+| `U` | local | 1 | 65 |
+| `l` | local | 1 | 55 |
+| `M` | local | 1 | 90 |
+| `L` | ฟังก์ชัน local | 1 | 90 |
+| `e` | ฟังก์ชัน local | 1 | 82 |
+| `K` | ฟังก์ชัน local | 1 | 59 |
+| `a` | ฟังก์ชัน local | 1 | 91 |
+| `f` | ฟังก์ชัน local | 1 | 51 |
+| `h` | ฟังก์ชัน local | 1 | 84 |
+| `r` | local | 1 | 62 |
+| `J` | local | 1 | 85 |
+| `G` | local | 1 | 84 |
+| `R` | local | 1 | 115 |
+| `B` | local | 1 | 77 |
+| `D` | local | 1 | 59 |
+| `X` | local | 1 | 54 |
+| `t` | local | 1 | 62 |
+| `T` | local | 1 | 31 |
+| `o` | local | 1 | 33 |
+| `d` | ฟังก์ชัน local | 1 | 19 |
+| `Z` | ฟังก์ชัน local | 1 | 38 |
+| `v` | local | 1 | 122 |
+| `g` | local | 1 | 70 |
+| `s` | local | 1 | 47 |
+| `w` | local | 1 | 65 |
+| `H` | ฟังก์ชัน local | 1 | 56 |
+| `I` | local | 1 | 65 |
+| `c` | local | 1 | 39 |
+| `x` | local | 1 | 49 |
+| `n` | local | 1 | 42 |
+| `mP` | local | 1 | 60 |
+| `AP` | local | 1 | 29 |
+| `WP` | local | 1 | 41 |
+| `pP` | local | 1 | 88 |
+| `PP` | local | 1 | 55 |
+| `FP` | local | 1 | 30 |
+| `bP` | local | 1 | 21 |
+| `EP` | local | 1 | 27 |
+| `CP` | local | 1 | 49 |
+| `NP` | local | 1 | 18 |
+| `yP` | local | 1 | 32 |
+| `uP` | ฟังก์ชัน local | 1 | 19 |
+| `zP` | local | 1 | 52 |
+| `YP` | ฟังก์ชัน local | 1 | 11 |
+| `OP` | ฟังก์ชัน local | 1 | 7 |
+| `VP` | local | 1 | 9 |
+| `qP` | local | 1 | 13 |
+| `jP` | local | 1 | 9 |
+| `kP` | local | 1 | 11 |
+| `iP` | local | 1 | 5 |
+| `QP` | local | 1 | 7 |
+| `SP` | local | 1 | 13 |
+| `UP` | local | 1 | 12 |
+| `lP` | ฟังก์ชัน local | 1 | 2 |
+| `MP` | local | 1 | 18 |
+| `LP` | local | 1 | 3 |
+| `eP` | local | 1 | 13 |
+| `KP` | local | 1 | 4 |
+| `aP` | local | 1 | 9 |
+| `fP` | local | 1 | 13 |
+| `hP` | local | 1 | 13 |
+| `rP` | local | 1 | 11 |
+| `JP` | ฟังก์ชัน local | 1 | 2 |
+| `GP` | local | 1 | 10 |
+| `RP` | local | 1 | 11 |
+| `BP` | local | 1 | 16 |
+| `DP` | ฟังก์ชัน local | 1 | 6 |
+| `XP` | local | 1 | 9 |
+| `tP` | local | 1 | 11 |
+| `TP` | local | 1 | 13 |
+| `oP` | local | 1 | 8 |
+| `dP` | local | 1 | 10 |
+| `ZP` | local | 1 | 12 |
+| `vP` | local | 1 | 4 |
+| `gP` | local | 1 | 12 |
+| `sP` | local | 1 | 4 |
+| `wP` | local | 1 | 11 |
+| `HP` | local | 1 | 9 |
+| `IP` | local | 1 | 4 |
+| `cP` | local | 1 | 11 |
+| `xP` | local | 1 | 8 |
+| `nP` | local | 1 | 12 |
+| `mo` | local | 1 | 12 |
+| `Ao` | local | 1 | 13 |
+| `Wo` | local | 1 | 17 |
+| `po` | local | 1 | 10 |
+| `Po` | local | 1 | 12 |
+| `Fo` | local | 1 | 11 |
+| `bo` | local | 1 | 11 |
+| `Eo` | local | 1 | 4 |
+| `Co` | local | 1 | 3 |
+| `No` | ฟังก์ชัน local | 1 | 2 |
+| `yo` | ฟังก์ชัน local | 1 | 3 |
+| `uo` | ฟังก์ชัน local | 1 | 2 |
+| `zo` | local | 1 | 3 |
+| `Yo` | local | 1 | 3 |
+| `Oo` | ฟังก์ชัน local | 1 | 4 |
+| `Vo` | ฟังก์ชัน local | 1 | 3 |
+| `qo` | ฟังก์ชัน local | 1 | 3 |
+| `jo` | ฟังก์ชัน local | 1 | 2 |
+| `ko` | local | 1 | 2 |
+| `io` | local | 1 | 2 |
+| `Qo` | local | 1 | 2 |
+| `So` | local | 1 | 2 |
+| `Uo` | local | 1 | 2 |
+| `lo` | ฟังก์ชัน local | 1 | 2 |
+| `Mo` | ฟังก์ชัน local | 1 | 2 |
+| `Lo` | ฟังก์ชัน local | 1 | 2 |
+| `eo` | ฟังก์ชัน local | 1 | 2 |
+| `Ko` | ฟังก์ชัน local | 1 | 2 |
+| `ao` | ฟังก์ชัน local | 1 | 2 |
+| `fo` | ฟังก์ชัน local | 1 | 2 |
+| `ho` | ฟังก์ชัน local | 1 | 2 |
+| `ro` | ฟังก์ชัน local | 1 | 2 |
+| `Jo` | local | 1 | 3 |
+
+สรุปชนิด: local 105, ฟังก์ชัน local 32
+
+### 7.B.2 ตัวระบุที่ไม่ได้ประกาศ (global/builtin) ของ bundle _7_ (ชื่อสั้น) (49 ตัว)
+
+`UDim2` x671, `Enum` x649, `Instance` x532, `Color3` x392, `TweenInfo` x188, `UDim` x156, `task` x123, `game` x93, `_G` x70, `pcall` x69, `getgenv` x65, `syn` x33, `ipairs` x33, `gethui` x32, `tostring` x26, `pairs` x26, `math` x22, `table` x20, `ColorSequenceKeypoint` x18, `Vector3` x15, `CFrame` x13, `string` x12, `warn` x12, `ColorSequence` x9, `RL` x8, `Vector2` x5, `os` x5, `isfile` x4, `unpack` x3, `require` x3, `setclipboard` x2, `toclipboard` x2, `writefile` x2, `readfile` x2, `delfile` x2, `tonumber` x2, `fireproximityprompt` x2, `rawget` x2, `typeof` x2, `continue` x2, `Drawing` x1, `getrawmetatable` x1, `setreadonly` x1, `newcclosure` x1, `getnamecallmethod` x1, `tick` x1, `type` x1, `filtergc` x1, `debug` x1
+
+### 7.B.3 property/key ที่ใช้ของ bundle _7_ (ชื่อสั้น) (375 ตัว)
+
+`new` x1604, `fromRGB` x392, `Position` x389, `Size` x375, `Parent` x338, `BackgroundTransparency` x295, `Name` x236, `UserInputType` x224, `Font` x208, `TextXAlignment` x178, `Text` x171, `BackgroundColor3` x140, `CornerRadius` x131, `TextColor3` x124, `EasingStyle` x110, `EasingDirection` x110, `X` x106, `TextSize` x104, `Out` x100, `Y` x99, `Character` x92, `Visible` x88, `Left` x86, `Quart` x85, `wait` x71, `Color` x64, `Transparency` x60, `Touch` x56, `Thickness` x55, `GothamBold` x55, `TextTruncate` x50, `spawn` x46, `Scale` x46, `ZIndex` x45, `GothamMedium` x45, `MouseButton1Click` x43, `Offset` x40, `UserInputState` x38, `Image` x36, `MouseButton1` x35, `ImageColor3` x33, `CFrame` x31, `FieldOfView` x30, `SortOrder` x30, `AddToggle` x26, `AtEnd` x25, `Padding` x25, `InputBegan` x24, `Back` x24, `AutoButtonColor` x23, `protect_gui` x22, `TextTransparency` x22, `ScaleType` x22, `AbsolutePosition` x22, `HorizontalAlignment` x22, `Health` x22, `InputChanged` x21, `MouseMovement` x21, `Active` x21, `ScrollBarThickness` x21, `Page` x20, `Icon` x20, `Label` x20, `AbsoluteSize` x20, `Changed` x19, `End` x19, `Button` x19, `Soft` x19, `CurrentCamera` x18, `insert` x17, `Magnitude` x17, `Completed` x16, `PlaceId` x16, `HumanoidRootPart` x16, `A` x15, `ClipsDescendants` x15, `Title` x15, `LayoutOrder` x15, `b` x15, `UserId` x14, `InputEnded` x12, `CanvasSize` x12, `AutomaticCanvasSize` x12, `AutomaticSize` x12, `BorderSizePixel` x12, `Humanoid` x12, `Callback` x12, `LocalPlayer` x11, `ResetOnSpawn` x11, `Desc` x11, `In` x10, `ThumbnailType` x10, `HeadShot` x10, `ThumbnailSize` x10, `Size100x100` x10, `DisplayName` x10, `Center` x10, `ViewportSize` x10, `clamp` x10, `Bounce` x10, `Rotation` x9, `ImageTransparency` x9, `Draggable` x9, `Fit` x9, `Close` x9, `W` x9, `head` x9, `Kill` x9, `ESP` x9, `AKConn` x9, `RenderStepped` x8, `ShootKA_Enabled` x8, `__SHOOTKA_LOOP` x8, `KeyCode` x8, `lower` x7, `EspColor` x7, `AimPart` x6, `Heartbeat` x6, `AutoFarm_Enabled` x6, `Velocity` x6, `Open` x6, `FastAttack` x6, `Remote` x6, `RemoteEvent` x6, `hum` x6, `n` x6, `ArmedOnly` x6, `floor` x5, `AutoFarmBoss_Enabled` x5, `BringChara` x5, `HoldAllItems` x5, `ToolName` x5, `ShootKA_HeldOnly` x5, `d` x5, `clock` x5, `KillNPC` x5, `KillPlayers` x5, `AKShot` x5, `delay` x4, `Right` x4, `PrimaryPart` x4, `SlimeGroupHunter` x4, `NoobyHunter` x4, `NoobGroupHunter` x4, `ThugHunter` x4, `EvilThugHunter` x4, `DuckHunter` x4, `SwordMasterHunter` x4, `CutieBossHunter` x4, `ShinoaHunter` x4, `CharaHunter` x4, `UnknownBossHunter` x4, `SansHunter` x4, `KyoHunter` x4, `AutoLightSword` x4, `AutoWarpToBoss` x4, `AutoRandom` x4, `AutoEquip` x4, `AttackAllBosses` x4, `AttackRange` x4, `AutoFruit` x4, `AutoMelee` x4, `AutoDefense` x4, `AutoStrength` x4, `TargetHeight` x4, `p` x4, `UI_Event` x4, `__SHOTEXTRA` x4, `Unit` x4, `origin` x4, `connect` x4, `ShootHub` x4, `MissionRunId` x4, `dist` x4, `Team` x4, `AKIdx` x4, `ScrollBarImageColor3` x3, `ScrollBarImageTransparency` x3, `TextWrapped` x3, `Silent` x3, `Wallbang` x3, `AutoCam` x3, `SkyHunter` x3, `ESPBox` x3, `ESPTracer` x3, `ESPHealth` x3, `Spin` x3, `SpinSpeed` x3, `ZigZag` x3, `InfiniteJump` x3, `NoClip` x3, `Stepped` x3, `CanCollide` x3, `Head` x3, `Angles` x3, `rad` x3, `Gotham` x3, `CharaPoint` x3, `Backpack` x3, `PlatformStand` x3, `__SHOTBASE` x3, `instance` x3, `id` x3, `Material` x3, `Enabled` x3, `M` x3, `LoopDelay` x3, `PerShot` x3, `Set` x3, `AKLoop` x3, `KillAllLoop` x3, `__MAGICALAY_BUNDLE_LOADED` x2, `Message` x2, `PlaceholderText` x2, `PlaceholderColor3` x2, `FocusLost` x2, `Crop` x2, `FillDirection` x2, `random` x2, `P` x2, `VerticalAlignment` x2, `AimbotSmooth` x2, `SpeedVal` x2, `huge` x2, `CameraMode` x2, `Classic` x2, `DevComputerCameraMode` x2, `CameraSubject` x2, `Adornee` x2, `FillColor` x2, `OutlineColor` x2, `FillTransparency` x2, `AlwaysOnTop` x2, `__namecall` x2, `Elastic` x2, `AnchorPoint` x2, `LightSwordPos` x2, `AddButton` x2, `AddSlider` x2, `AddDropdown` x2, `Shop_Event` x2, `sort` x2, `dir` x2, `charge` x2, `part` x2, `m` x2, `t` x2, `h` x2, `sid` x2, `pid` x2, `maxDist` x2, `configValues` x2, `RecoilTilt` x2, `RecoilUp` x2, `RecoilLeft` x2, `RecoilRight` x2, `model` x2, `MissionKeysBound` x2, `Tycoon3` x2, `Remotes` x2, `F` x2, `SoundId` x1, `Volume` x1, `Ended` x1, `remove` x1, `Focused` x1, `gsub` x1, `GameId` x1, `PlayerAdded` x1, `PlayerRemoving` x1, `Horizontal` x1, `Select` x1, `defer` x1, `GameTitle` x1, `find` x1, `InfoType` x1, `Asset` x1, `IconImageAssetId` x1, `match` x1, `upper` x1, `Top` x1, `Code` x1, `Z` x1, `From` x1, `To` x1, `HealthChanged` x1, `StudsOffset` x1, `TextStrokeTransparency` x1, `MaxHealth` x1, `WalkSpeed` x1, `JumpRequest` x1, `HumanoidStateType` x1, `Jumping` x1, `SafeAutoSellUI` x1, `MaxActivationDistance` x1, `HoldDuration` x1, `DisplayOrder` x1, `Q` x1, `Sans` x1, `Chara` x1, `Shinoa` x1, `Kyo` x1, `Idled` x1, `MouseButton1Down` x1, `MouseButton1Up` x1, `AddLabel` x1, `DescendantAdded` x1, `DescendantRemoving` x1, `CharacterAdded` x1, `MaxTarget` x1, `CF` x1, `currentWeapon` x1, `getWeaponForInstance` x1, `nextShotId` x1, `AmmoCapacity` x1, `Get` x1, `ZoomValue` x1, `Zoom2Value` x1, `AimRM` x1, `SpreadRM` x1, `DamageMod` x1, `minDamageMod` x1, `MinRecoilPower` x1, `MaxRecoilPower` x1, `RecoilPowerStepAmount` x1, `MinSpread` x1, `MaxSpread` x1, `AimInaccuracyStepAmount` x1, `AimInaccuracyDecrease` x1, `WalkMult` x1, `adsTime` x1, `MuzzleVelocity` x1, `camRecoilMod` x1, `gunRecoilMod` x1, `AcessId` x1, `Id` x1, `format` x1, `Damage` x1, `HitEffect` x1, `DepthMode` x1, `HighlightDepthMode` x1, `OutlineTransparency` x1, `H` x1, `N` x1, `J` x1, `B` x1, `MagicAlayOfficial` x1, `WakeIncomeStream` x1, `Purchases` x1, `Upgrade` x1, `cancel` x1, `getupvalue` x1, `effects` x1, `Barrage` x1, `Frost` x1, `Ricochet` x1, `firedAt` x1, `hitInstance` x1, `hitNormal` x1, `hitPos` x1, `isADS` x1, `isCharacterHit` x1, `kind` x1, `mode` x1, `ownerUserId` x1, `to` x1, `Game` x1, `FireShot` x1, `direction` x1, `hitPosition` x1, `hitPart` x1, `shotId` x1, `clientTime` x1, `zero` x1, `Event` x1
+
+### 7.B.4 เมธอดที่เรียกของ bundle _7_ (ชื่อสั้น) (44 ตัว)
+
+`Play` x224, `Create` x223, `Connect` x164, `FindFirstChild` x114, `GetService` x87, `IsA` x27, `FireServer` x24, `WaitForChild` x23, `FindFirstChildOfClass` x22, `Destroy` x21, `GetPlayers` x14, `GetChildren` x13, `GetUserThumbnailAsync` x10, `GetDescendants` x8, `Disconnect` x6, `GetAttribute` x6, `FindFirstChildWhichIsA` x5, `InvokeServer` x4, `lower` x3, `find` x3, `GetPivot` x3, `GetTagged` x3, `GetProductInfo` x2, `Wait` x2, `GetPlayerFromCharacter` x2, `PreloadAsync` x1, `Fire` x1, `GetPropertyChangedSignal` x1, `HttpGet` x1, `Lerp` x1, `IsDescendantOf` x1, `WorldToViewportPoint` x1, `ChangeState` x1, `InputHoldBegin` x1, `InputHoldEnd` x1, `CaptureController` x1, `ClickButton2` x1, `gsub` x1, `Overlap` x1, `Activate` x1, `PivotTo` x1, `UnequipTools` x1, `EquipTool` x1, `GetServerTimeNow` x1
+
+### 7.B.5 สตริงลิเทอรัลทั้งหมดของ bundle _7_ (ชื่อสั้น) (446 ตัว)
+
+`ReplicatedStorage`, `CoreGui`, `Players`, `TweenService`, `Lighting`, `UserInputService`, `RunService`, `Workspace`, `MarketplaceService`, `SoundService`, `MagicAlay_SavedKey.txt`, `MagicAlay`, `https://discord.gg/eWZ7yHeQr`, `rbxassetid://111174530730534`, `rbxassetid://6436188054`, `rbxassetid://91660275693179`, `Sound`, `ScreenGui`, `MagicAlay_Ultra_IOS_GUI`, `PlayerGui`, `103143683174616`, `9405930424`, `rbxassetid://`, `ContentProvider`, `UIScale`, `HubUIScale`, `Frame`, `iOSNotificationBanner`, `UICorner`, `UIGradient`, `UIStroke`, `ImageLabel`, `rbxassetid://8215093320`, `TextLabel`, `MagicAlay Hub`, `Notification Message`, `UIBlurEffect`, `BlurEffect`, `iOSLoginModal`, `BindableEvent`, `IntroOverlay`, `IntroLogo`, `rbxassetid://140419294351439`, `MainFrame`, `TextBox`, `Enter Key...`, `TextButton`, `Access Granted`, `Passcode Verified Successfully!`, `%s+`, `admin`, `Access Denied`, `Incorrect Key! Enter: MagicAlay`, `Verify`, `Get Key`, `Key Link Copied`, `Get-Key link copied to clipboard!`, `Discord`, `Support Copied`, `Support Discord link copied!`, `iOSEdgeDockBar`, `ImageButton`, `EdgeToggleButton`, `8215093320`, `DockSettingsIcon`, `rbxassetid://87350324375899`, `iOSSettingsModal`, `Settings & Game Info`, `ScrollingFrame`, `SettingsScroll`, `UIListLayout`, `GameWidget`, `Loading Map...`, `Players in server: `, `Place ID: `, `rbxthumb://type=GameIcon&id=`, `&w=150&h=150`, `Camera Blur Effect`, `Toggle iOS Background Blur Effect`, `Setting Updated`, `Blur Effect: `, `ON`, `OFF`, `UI Size Scaling (\224\184\155\224\184\163\224\184\177\224\184\154\224\184\130\224\184\153\`, `100%`, `80%`, `UI Scale`, `Adjusted UI size to 80%`, `90%`, `Adjusted UI size to 90%`, `Adjusted UI size to 100%`, `110%`, `Adjusted UI size to 110%`, `120%`, `Adjusted UI size to 120%`, `Saved Key Data`, `Reset Key`, `Key Reset`, `Saved key deleted! Please rejoin or restart.`, `HeaderBar`, `Development by sky`, `Development by Aek`, `Folder`, `PagesFolder`, `BottomDock`, `TabIndicator`, `TabButtonContainer`, `UserProfileFrame`, `ProfileAvatar`, `DisplayNameLabel`, `UsernameLabel`, `@`, `ModalOverlay`, `ModalCard`, `Execute Script`, `Do you want to run this script?`, `Cancel`, `Run Script`, `Are you sure you want to run [`, `]?`, `Script Executed`, `Executed [`, `] successfully!`, `TabBtn`, `TabIcon`, `TabLabel`, `Page`, `SearchFrame`, `SearchBox`, `Search scripts...`, `CardsContainer`, `Text`, `GameTitle`, `_Card`, `CardImg`, `https://apis.roblox.com/universes/v1/places/`, `/universe`, `%d+`, `rbxthumb://type=Asset&id=`, `[MagicAlay] cover failed: `, ` (`, `)`, `GameDesc`, `CreditsScroll`, `Official Script Hub`, `Lead Developer`, `Aek`, `Core Developer`, `Sky`, `Development Support Team`, `Saisansk`, `Recommend`, `All Scripts`, `79159724721875`, `Credits`, `104769040369946`, `Remotes`, `MagicAlay_IOS_Sidebar_GUI`, `InGameScreen`, `MoblieControls`, `NotificationHolder`, `Sidebar`, `Development by Sky`, `rbxassetid://6031075931`, `Combat`, `Visuals`, `Player`, `iOSFloatButton`, `: `, `Head`, `  Target Part: Head`, `HumanoidRootPart`, `UpperTorso`, `LowerTorso`, `  Target Part: `, `Aimbot Lock`, `Humanoid`, `Aimbot Smoothness`, `Wallbang`, `BasePart`, `AutoCam`, `SkyHunter`, `  ESP Color: Red`, `  ESP Color: Green`, `  ESP Color: Blue`, `  ESP Color: Yellow`, `ESP Box`, `MagicAlayESP`, `Highlight`, `ESP Tracers`, `Line`, `Elimination`, `Successfully eliminated: `, `ESP Health Bar`, `HealthTagGui`, `BillboardGui`, `HealthLabel`, `\nHP: `, `/`, `Spinbot`, `Spin Speed`, `ZigZag`, `WalkSpeed Slider`, `Infinite Jump`, `Player NoClip`, `HitboxMod`, `FireServer`, `Action`, `hit`, `BaconMode (Auto Farm)`, `Mobs`, `Enemies`, `SafeAutoSellUI`, `GuiObject`, `PopUp`, `popup`, `adgui`, `notice`, `DragHeader`, `Main`, `Settings`, `Toggle`, `Pill`, `Knob`, `HalloweenTokenFolder`, `Tokens`, `Model`, `PumpkinBoss`, `DamagePlatforms`, `DamagePlatform`, `TokenTemplate`, `Auto Farm Tokens`, `Auto Farm PumpkinBoss`, `House`, `Sell`, `DoorFolder`, `Door`, `DoorPart`, `ProximityPrompt`, `Events`, `OpenCrateBaht`, `Auto Sell`, `Auto Crate`, `iOSNotificationSystem`, `NotificationContainer`, `iOSBanner`, `TopPill`, `ContentHolder`, `AppIcon`, `AppHeader`, `MAGICALAY HUB`, `TimeLabel`, `now`, `Title`, `Notification`, `Message`, `sans`, `chara`, `Duck Boss`, `duck boss`, `shinoa`, `Cutie Boss`, `cutie boss`, `Sword Master`, `sword master`, `Unknown Boss`, `unknown boss`, `kyo`, `VirtualUser`, `  `, `\226\150\188`, ` [`, `]`, `\226\150\178`, `Boss`, `Stats`, `Misc`, `Auto Farm Slime`, `Auto Farm Nooby`, `Auto Farm Noob`, `Auto Farm Thug`, `Auto Farm Evil Thug`, `Auto Teleport To Boss`, `Hunt Kyo`, `Hunt Sans`, `Hunt Chara`, `Hunt Shinoa`, `Hunt Unknown Boss`, `Hunt Duck Boss`, `Hunt Sword Master`, `Hunt Cutie Boss`, `Hold All Items`, `Item Status`, `Hold All Items Enabled`, `Hold All Items Disabled`, `Attack All Bosses`, `Combat Mode`, `Targeting all active bosses`, `Targeting stopped`, `Auto Equip Weapon`, `Cursed Scythe`, `Epic Sword`, `Youru`, `True Yorou`, `Elucidator`, `Dual Sword`, `Real Knife`, `True Knife`, `Saber`, `Bisento`, `Amethyst Scythe`, `Lighting Sword`, `Limitless`, `Black leg`, `OFA [Deku]`, `Select Weapon`, `Fast Attack`, `Attack Distance`, `Reset Stats (Beli)`, `Shop`, `Reset`, `Money`, `Auto Stats Devil Fruit`, `Auto Stats Melee`, `Auto Stats Defense`, `Auto Stats Sword/Strength`, `Auto Get Light Sword`, `Bring Chara`, `Auto Random Fruit`, `Boss Spawned`, ` is now available!`, `Boss Defeated`, ` was eliminated.`, ` `, `Hunter`, `Combat_Event`, `Weapon_Event`, `Module`, `Hitbox`, `Attack`, `Slash`, `Backpack`, `Tool`, `RemoteEvent`, `AttackRemote`, `slime`, `king slime`, `nooby`, `cutie noob`, `elite noob`, `king noob`, `thug`, `evil thug`, `Random Fruity`, `Add Stats`, `DevilFruit`, `1`, `Melee`, `Defense`, `Strength`, `System Ready`, `MagicAlay Hub loaded successfully.`, `Eventos`, `WeaponFired`, `WeaponHit`, `WeaponReloadRequest`, `WeaponsSystem`, `[KillAll] `, `STATE`, `Auto Kill`, `Weapon Kill`, `CollectionService`, `ACS_Engine`, `Network`, `ACS_Settings`, `table`, `-`, `NPC`, `ChangeDoor`, `[Mission] no ChangeDoor in this map`, `EnterableDoor`, `[Mission] no doors in this map`, `?`, `State`, `Open`, `Closed`, `Kick`, `Peak`, `[Mission] doors %d/%d`, `ShoutNPC`, `[Mission] no ShoutNPC in this map`, `[Mission] no NPCs in this map`, `Surrendered`, `[Mission] shout done`, `Autokill (H)`, `Armed Only`, `Kill NPCs`, `Kill Players`, `ESP Highlight (N)`, `Open All Doors (J)`, `Surrender All (B)`, `ACS_ESP`, `[Mission] ready in Main tab \| H kill / J doors / B surrender / N esp`, `MagicAlayOfficial`, `MagicAlay \240\159\170\132`, `Tycoon : Lemon Stand`, `Card`, `LemonStand`, `Fast Income`, `Fast Income: ON`, `Fast Income: OFF`, `Auto Upgrade Lemon Stand`, `Lemon Stand`, `Auto Upgrade: ON`, `Auto Upgrade: OFF`, `ShootReplicate`, `Characters`, `function`, `requestShot`, `number`, `Lobby`, `bullet`, `single`, `_Toggle`, `Torso`, `Sniper`, `AWM`, `Handle`, `KillAll: \224\184\171\224\184\178\224\184\163\224\184\181\224\185\130\224\184\161\224\184\`, `KillAll: \224\185\132\224\184\161\224\185\136\224\184\161\224\184\181\224\184\155\224\184\`, `[FPS] Gun Grounds FFA`, `Script by MagicAlay`, `City Thailand 2`, `GluePiece`, `FreeFireMax`, `Swat Simulator`, `Sell Lemons`, `Murder Duels`, `Aura Edit Arena`, `Fortline`, `Game Script`, `Game Detected`, `Found build for [`, `] - tap its card to run.`, `Auto Login`, `Saved passcode loaded automatically!`
+
+### 7.B.6 ตัวเลขลิเทอรัลทั้งหมดของ bundle _7_ (ชื่อสั้น) (175 ค่า)
+
+`0` x1372, `1` x673, `255` x614, `5` x201, `12` x115, `2` x103, `14` x101, `8` x93, `3` x93, `25` x93, `16` x91, `10` x82, `18` x72, `9` x63, `24` x62, `4` x53, `20` x49, `175` x43, `60` x42, `32` x40, `150` x39, `15` x37, `310` x37, `44` x36, `11` x35, `170` x35, `195` x34, `34` x34, `46` x33, `48` x31, `28` x27, `92` x27, `52` x26, `26` x25, `155` x25, `7` x25, `50` x24, `70` x24, `35` x23, `145` x23, `1.2` x22, `36` x22, `85` x22, `6` x21, `38` x20, `45` x20, `30` x19, `95` x19, `165` x19, `88` x17, `180` x17, `120` x16, `22` x15, `140` x15, `54` x15, `40` x14, `125` x13, `200` x13, `100` x12, `160` x12, `303` x12, `199` x12, `55` x11, `185` x11, `78` x11, `75` x10, `62` x10, `230` x10, `80` x9, `93` x9, `245` x9, `130` x8, `42` x8, `490` x8, `110` x7, `82` x7, `240` x7, `23` x7, `123` x7, `220` x6, `2.5` x6, `302` x6, `210` x6, `21` x6, `1.1` x5, `65` x5, `132` x5, `89` x5, `209` x4, `1.5` x4, `58` x4, `3.5` x4, `05` x4, `270` x3, `90` x3, `401` x3, `205` x3, `69` x3, `320` x3, `260` x3, `19` x3, `13` x3, `135` x2, `300` x2, `47` x2, `370` x2, `250` x2, `252` x2, `253` x2, `68` x2, `151` x2, `152` x2, `290` x2, `301` x2, `72` x2, `115` x2, `53` x2, `105` x2, `64` x2, `56` x2, `417.488556` x2, `171.070755` x2, `49.2427864` x2, `999999` x2, `340` x2, `900` x2, `001` x2, `8.5` x2, `235` x2, `400` x1, `402` x1, `420` x1, `256` x1, `1.3` x1, `035` x1, `164` x1, `296` x1, `304` x1, `63` x1, `116` x1, `1.0` x1, `169` x1, `222` x1, `280` x1, `33` x1, `51` x1, `94` x1, `17` x1, `01` x1, `480` x1, `215` x1, `554.939148` x1, `29.1302795` x1, `630.229553` x1, `29.4552612` x1, `6.01364279` x1, `2148.53149` x1, `225` x1, `190` x1, `3000` x1, `03` x1, `2.0` x1, `66` x1, `96` x1, `100000` x1, `200000` x1, `12137249458` x1, `4503309821` x1, `394506555` x1, `93233198656969` x1, `102837194624695` x1, `79268393072444` x1, `120851538706364` x1, `106502313058092` x1, `14313259147` x1
+
+### 7.C.1 ตัวแปรที่ประกาศทั้งหมดของ abacktools (ชื่อที่ตั้งใหม่) (121 ตัว)
+
+| ตัวแปร | ชนิด | บรรทัดแรก | ถูกอ้างถึง (ครั้ง) |
+|---|---|---|---|
+| `ReplicatedStorage` | local | 7 | 3 |
+| `CoreGui` | local | 8 | 3 |
+| `Players` | local | 9 | 3 |
+| `TweenService` | local | 10 | 23 |
+| `Lighting` | local | 11 | 3 |
+| `UserInputService` | local | 12 | 5 |
+| `RunService` | local | 13 | 1 |
+| `Workspace` | local | 14 | 4 |
+| `LocalPlayer` | local | 15 | 11 |
+| `Camera` | local | 16 | 5 |
+| `PlayerGui` | local | 17 | 2 |
+| `guiParent` | local | 19 | 2 |
+| `oldGui` | local | 20 | 3 |
+| `screenGui` | local | 25 | 9 |
+| `blur` | local | 36 | 6 |
+| `baseFOV` | local | 40 | 4 |
+| `menuOpen` | local | 41 | 6 |
+| `updateBlurAndFOV` | ฟังก์ชัน local | 42 | 2 |
+| `menuWidth` | local | 51 | 4 |
+| `menuHeight` | local | 52 | 6 |
+| `centerPos` | local | 53 | 2 |
+| `mainFrame` | local | 54 | 22 |
+| `mainStroke` | local | 65 | 4 |
+| `dragHeader` | local | 69 | 11 |
+| `titleLabel` | local | 77 | 9 |
+| `subtitleLabel` | local | 86 | 10 |
+| `dragging` | local | 96 | 4 |
+| `dragInput` | local | 97 | 4 |
+| `dragStart` | local | 97 | 3 |
+| `startPos` | local | 97 | 6 |
+| `input` | พารามิเตอร์ | 98 | 28 |
+| `delta` | local | 108 | 7 |
+| `tabContainer` | local | 117 | 13 |
+| `tabLayout` | local | 128 | 6 |
+| `pagesFolder` | local | 134 | 4 |
+| `tabs` | local | 137 | 3 |
+| `firstTab` | local | 138 | 3 |
+| `tabOrder` | local | 139 | 4 |
+| `createTab` | ฟังก์ชัน local | 140 | 2 |
+| `tabName` | พารามิเตอร์ | 140 | 4 |
+| `iconId` | พารามิเตอร์ | 140 | 2 |
+| `tabButton` | local | 141 | 15 |
+| `tabIcon` | local | 152 | 9 |
+| `tabLabel` | local | 159 | 12 |
+| `page` | local | 169 | 14 |
+| `pageLayout` | local | 179 | 3 |
+| `selectTab` | ฟังก์ชัน local | 182 | 3 |
+| `_` | ตัวแปรลูป | 183 | 12 |
+| `tabEntry` | ตัวแปรลูป | 183 | 5 |
+| `createToggle` | ฟังก์ชัน local | 202 | 4 |
+| `parent` | พารามิเตอร์ | 202 | 6 |
+| `text` | พารามิเตอร์ | 202 | 8 |
+| `default` | พารามิเตอร์ | 202 | 4 |
+| `callback` | พารามิเตอร์ | 202 | 9 |
+| `toggleButton` | local | 203 | 12 |
+| `toggleStroke` | local | 211 | 4 |
+| `label` | local | 215 | 32 |
+| `track` | local | 225 | 9 |
+| `knob` | local | 231 | 8 |
+| `state` | local | 237 | 5 |
+| `farmPage` | local | 252 | 6 |
+| `autoFarmClose` | local | 253 | 4 |
+| `autoEquip` | local | 254 | 3 |
+| `selectedWeapon` | local | 255 | 8 |
+| `selectedMob` | local | 256 | 9 |
+| `autoHitRange` | local | 257 | 3 |
+| `hitRange` | local | 258 | 3 |
+| `farmCenter` | local | 259 | 7 |
+| `netFolder` | local | 260 | 5 |
+| `registerAttack` | local | 261 | 3 |
+| `registerHit` | local | 262 | 4 |
+| `createWeaponDropdown` | ฟังก์ชัน local | 263 | 2 |
+| `dropdown` | local | 264 | 30 |
+| `dropdownStroke` | local | 271 | 8 |
+| `arrow` | local | 285 | 24 |
+| `dropdownButton` | local | 294 | 12 |
+| `optionList` | local | 299 | 30 |
+| `optionLayout` | local | 308 | 6 |
+| `isOpen` | local | 311 | 10 |
+| `refreshOptions` | ฟังก์ชัน local | 312 | 4 |
+| `oldOption` | ตัวแปรลูป | 313 | 6 |
+| `weaponNames` | local | 318 | 6 |
+| `child` | ตัวแปรลูป | 320 | 21 |
+| `weaponName` | ตัวแปรลูป | 331 | 4 |
+| `optionButton` | local | 332 | 24 |
+| `createMobDropdown` | ฟังก์ชัน local | 370 | 2 |
+| `mobNames` | local | 425 | 4 |
+| `enemiesFolder` | local | 426 | 8 |
+| `mobName` | ตัวแปรลูป | 434 | 4 |
+| `value` | พารามิเตอร์ | 473 | 6 |
+| `choice` | พารามิเตอร์ | 479 | 4 |
+| `character` | local | 491 | 7 |
+| `humanoid` | local | 495 | 6 |
+| `rootPart` | local | 496 | 7 |
+| `backpack` | local | 504 | 3 |
+| `backpackTool` | ตัวแปรลูป | 506 | 3 |
+| `weaponTool` | local | 515 | 5 |
+| `wave` | local | 529 | 3 |
+| `offsetX` | local | 530 | 2 |
+| `offsetZ` | local | 531 | 2 |
+| `hoverPos` | local | 532 | 2 |
+| `centerCFrame` | local | 536 | 2 |
+| `mobHumanoid` | local | 538 | 7 |
+| `mobRoot` | local | 539 | 13 |
+| `isTarget` | local | 541 | 4 |
+| `mobHead` | local | 564 | 3 |
+| `distance` | local | 568 | 4 |
+| `otherPlayer` | ตัวแปรลูป | 576 | 4 |
+| `otherChar` | local | 578 | 4 |
+| `otherRoot` | local | 579 | 5 |
+| `otherHumanoid` | local | 580 | 4 |
+| `otherHead` | local | 581 | 3 |
+| `toggleMenu` | ฟังก์ชัน local | 596 | 2 |
+| `closeTween` | local | 605 | 3 |
+| `floatButton` | local | 614 | 16 |
+| `floatStroke` | local | 625 | 4 |
+| `floatDragging` | local | 629 | 4 |
+| `floatInput` | local | 630 | 4 |
+| `floatDragStart` | local | 630 | 3 |
+| `floatStartPos` | local | 630 | 6 |
+| `floatMoved` | local | 631 | 4 |
+
+สรุปชนิด: local 96, ฟังก์ชัน local 8, พารามิเตอร์ 9, ตัวแปรลูป 8
+
+### 7.C.2 ตัวระบุที่ไม่ได้ประกาศ (global/builtin) ของ abacktools (ชื่อที่ตั้งใหม่) (20 ตัว)
+
+`UDim2` x61, `Enum` x54, `Instance` x49, `Color3` x34, `TweenInfo` x22, `UDim` x15, `pairs` x10, `game` x8, `table` x7, `Vector3` x7, `pcall` x4, `gethui` x4, `syn` x3, `task` x3, `math` x3, `ipairs` x2, `CFrame` x2, `sethiddenproperty` x2, `tostring` x1, `tick` x1
+
+### 7.C.3 property/key ที่ใช้ของ abacktools (ชื่อที่ตั้งใหม่) (86 ตัว)
+
+`new` x156, `Size` x38, `fromRGB` x34, `Parent` x31, `Position` x31, `BackgroundTransparency` x26, `UserInputType` x24, `Text` x23, `Font` x20, `Name` x18, `TextXAlignment` x16, `Visible` x14, `BackgroundColor3` x13, `TextColor3` x12, `Y` x12, `CornerRadius` x11, `TextSize` x10, `Left` x8, `X` x8, `HorizontalAlignment` x8, `MouseButton1Click` x7, `EasingStyle` x6, `EasingDirection` x6, `Out` x6, `GothamBold` x6, `Touch` x6, `Quart` x5, `Color` x5, `Thickness` x5, `Transparency` x5, `Character` x5, `Health` x5, `FieldOfView` x4, `GothamMedium` x4, `MouseButton1` x4, `Scale` x4, `Offset` x4, `ScrollBarThickness` x4, `CanvasSize` x4, `AutomaticCanvasSize` x4, `AutomaticSize` x4, `Padding` x4, `Center` x4, `insert` x4, `ClipsDescendants` x3, `AutoButtonColor` x3, `ImageColor3` x3, `find` x3, `Magnitude` x3, `protect_gui` x2, `Active` x2, `InputBegan` x2, `InputChanged` x2, `MouseMovement` x2, `InputEnded` x2, `FillDirection` x2, `SortOrder` x2, `LayoutOrder` x2, `VerticalAlignment` x2, `Image` x2, `Page` x2, `Button` x2, `Icon` x2, `Label` x2, `Backpack` x2, `wait` x2, `Z` x2, `CFrame` x2, `Velocity` x2, `AssemblyLinearVelocity` x2, `CanCollide` x2, `ScaleType` x2, `LocalPlayer` x1, `CurrentCamera` x1, `ResetOnSpawn` x1, `Vertical` x1, `Top` x1, `Modules` x1, `spawn` x1, `sin` x1, `cos` x1, `huge` x1, `AssemblyAngularVelocity` x1, `Back` x1, `Completed` x1, `Fit` x1
+
+### 7.C.4 เมธอดที่เรียกของ abacktools (ชื่อที่ตั้งใหม่) (13 ตัว)
+
+`FindFirstChild` x23, `Create` x22, `Play` x22, `Connect` x14, `GetService` x8, `GetChildren` x8, `IsA` x6, `Destroy` x3, `FireServer` x3, `WaitForChild` x2, `EquipTool` x2, `FindFirstChildOfClass` x1, `GetPlayers` x1
+
+### 7.C.5 สตริงลิเทอรัลทั้งหมดของ abacktools (ชื่อที่ตั้งใหม่) (57 ตัว)
+
+`ReplicatedStorage`, `CoreGui`, `Players`, `TweenService`, `Lighting`, `UserInputService`, `RunService`, `Workspace`, `PlayerGui`, `MagicAlay_IOS_Sidebar_GUI`, `ScreenGui`, `UIBlurEffect`, `BlurEffect`, `Frame`, `MainFrame`, `UICorner`, `UIStroke`, `TextButton`, `DragHeader`, `TextLabel`, `MagicAlay`, `0.001s Ultra Attack + All Targets (Mobs & Players)`, `ScrollingFrame`, `TabButtonContainer`, `UIListLayout`, `Folder`, `PagesFolder`, `TabBtn`, `ImageLabel`, `rbxassetid://`, `Page`, `Auto Farm`, `All Weapons`, `Bandit`, `Modules`, `Net`, `RE/RegisterAttack`, `RE/RegisterHit`, `: `, `Tool`, `  `, `All Mobs`, `Enemies`, `Humanoid`, `Auto Farm Close (Central Hub + Pull)`, `Auto Equip Weapon`, `Select Mob`, `Select Weapon`, `Auto Hit Range (Multi-Target AoE)`, `HumanoidRootPart`, `Backpack`, `SimulationRadius`, `Head`, `54136d02`, `ImageButton`, `iOSFloatButton`, `rbxassetid://6023426915`
+
+### 7.C.6 ตัวเลขลิเทอรัลทั้งหมดของ abacktools (ชื่อที่ตั้งใหม่) (69 ค่า)
+
+`0` x139, `1` x58, `255` x48, `10` x18, `160` x14, `42` x13, `0.5` x11, `0.2` x11, `18` x8, `0.3` x7, `2` x7, `185` x7, `12` x7, `40` x7, `8` x6, `0.25` x6, `16` x5, `11` x5, `60` x5, `14` x4, `35` x4, `6` x4, `52` x4, `9` x4, `220` x4, `4` x3, `22` x3, `30` x3, `0.92` x3, `0.85` x3, `1.5` x3, `430` x2, `24` x2, `36` x2, `62` x2, `50` x2, `25` x2, `199` x2, `123` x2, `75` x2, `20` x2, `5` x2, `120` x2, `44` x2, `28` x2, `55` x2, `240` x2, `170` x2, `0.15` x1, `1.2` x1, `0.7` x1, `150` x1, `340` x1, `115` x1, `32` x1, `145` x1, `135` x1, `0.82` x1, `48` x1, `130068439240504` x1, `300` x1, `1062.72` x1, `14.53` x1, `1585.12` x1, `0.6666666865348816` x1, `1.3` x1, `0.001` x1, `0.4` x1, `26` x1
+
+### 7.D สตริงที่มีเฉพาะใน _7_ (ไม่มีใน __12_)
+`%d+`, `/universe`, `KillAll: \224\184\171\224\184\178\224\184\163\224\184\181\224\185\130\224\184\161\224\184\`, `KillAll: \224\185\132\224\184\161\224\185\136\224\184\161\224\184\181\224\184\155\224\184\`, `MagicAlay \240\159\170\132`, `UI Size Scaling (\224\184\155\224\184\163\224\184\177\224\184\154\224\184\130\224\184\153\`, `[MagicAlay] cover failed: `, `\226\150\178`, `\226\150\188`, `\nHP: `, `https://apis.roblox.com/universes/v1/places/`, `rbxthumb://type=GameIcon&id=`
+
+### 7.E สตริงที่มีเฉพาะใน __12_ (ไม่มีใน _7_)
+` HP: `, `%Y-%m-%d %H:%M:%S`, `Chara`, `Content-Type`, `Execution #`, `HttpService`, `KillAll`, `Kyo`, `MagicAlay_TrackingCache.json`, `Name`, `Number`, `POST`, `Sans`, `Shinoa`, `application/json`, `color`, `embeds`, `fields`, `footer`, `https://discord.com/api/webhooks/<ซ่อน>`, `inline`, `name`, `text`, `thumbnail`, `title`, `url`, `value`
+
+### 7.F ไฟล์ A (VM): สรุปจำนวนต่อฟังก์ชัน
+
+| proto | พารามิเตอร์ | จำนวนคำสั่ง | ค่าคงที่ | สตริง | ตัวเลข | ฟังก์ชันย่อย |
+|---|---|---|---|---|---|---|
+| main | 0 | 1547 | 506 | 344 | 162 | 19 |
+| main.1 | 2 | 38 | 2 | 0 | 2 | 0 |
+| main.2 | 0 | 35 | 6 | 3 | 3 | 0 |
+| main.3 | 0 | 104 | 17 | 9 | 8 | 0 |
+| main.4 | 1 | 35 | 7 | 5 | 2 | 0 |
+| main.5 | 1 | 49 | 12 | 11 | 1 | 0 |
+| main.6 | 1 | 18 | 4 | 4 | 0 | 0 |
+| main.7 | 2 | 225 | 74 | 41 | 32 | 1 |
+| main.7.1 | 0 | 138 | 28 | 12 | 14 | 0 |
+| main.8 | 4 | 271 | 65 | 27 | 37 | 1 |
+| main.8.1 | 0 | 132 | 23 | 7 | 16 | 0 |
+| main.9 | 3 | 265 | 75 | 38 | 35 | 2 |
+| main.9.1 | 0 | 182 | 50 | 32 | 18 | 1 |
+| main.9.1.1 | 0 | 69 | 21 | 9 | 11 | 0 |
+| main.9.2 | 0 | 85 | 19 | 9 | 8 | 0 |
+| main.10 | 1 | 23 | 4 | 1 | 3 | 0 |
+| main.11 | 1 | 5 | 2 | 1 | 1 | 0 |
+| main.12 | 1 | 5 | 2 | 1 | 1 | 0 |
+| main.13 | 1 | 5 | 2 | 1 | 1 | 0 |
+| main.14 | 0 | 23 | 4 | 3 | 1 | 1 |
+| main.14.1 | 0 | 676 | 72 | 32 | 39 | 1 |
+| main.14.1.1 | 0 | 28 | 7 | 4 | 2 | 0 |
+| main.15 | 0 | 122 | 23 | 16 | 6 | 1 |
+| main.15.1 | 0 | 6 | 2 | 1 | 0 | 0 |
+| main.16 | 1 | 34 | 8 | 5 | 3 | 0 |
+| main.17 | 1 | 65 | 14 | 12 | 2 | 0 |
+| main.18 | 1 | 18 | 4 | 4 | 0 | 0 |
+| main.19 | 0 | 6 | 0 | 0 | 0 | 0 |
