@@ -1,0 +1,525 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+pcall(function()
+    local root = (gethui and gethui()) or CoreGui
+    local old = root:FindFirstChild("MagicAlay_Sidebar_GUI")
+    if old then old:Destroy() end
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MagicAlay_Sidebar_GUI"
+ScreenGui.ResetOnSpawn = false
+
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = playerGui
+end
+
+local BlurEffect = Lighting:FindFirstChild("UIBlurEffect") or Instance.new("BlurEffect")
+BlurEffect.Name = "UIBlurEffect"
+BlurEffect.Size = 0
+BlurEffect.Parent = Lighting
+
+local OriginalFOV = Camera.FieldOfView
+local isOpen = false
+
+local function UpdateBlurState()
+    if isOpen then
+        TweenService:Create(Camera, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {FieldOfView = OriginalFOV - 4}):Play()
+        TweenService:Create(BlurEffect, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = 22}):Play()
+    else
+        TweenService:Create(Camera, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {FieldOfView = OriginalFOV}):Play()
+        TweenService:Create(BlurEffect, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = 0}):Play()
+    end
+end
+
+local HubWidth = 430
+local HubHeight = 330
+local TargetPosition = UDim2.new(0.5, -HubWidth/2, 0.5, -HubHeight/2)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, HubWidth, 0, HubHeight)
+MainFrame.Position = TargetPosition
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.BackgroundTransparency = 0.15
+MainFrame.Active = true
+MainFrame.Visible = false
+MainFrame.ClipsDescendants = false
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 22)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 255, 255)
+MainStroke.Thickness = 1.2
+MainStroke.Transparency = 0.7
+
+-- แถบหัวข้อด้านบน (ลากเลื่อนหน้าต่าง)
+local SideTitle = Instance.new("TextButton")
+SideTitle.Name = "DragHeader"
+SideTitle.Size = UDim2.new(1, -16, 0, 42)
+SideTitle.Position = UDim2.new(0, 10, 0, 8)
+SideTitle.Text = ""
+SideTitle.BackgroundTransparency = 1
+SideTitle.AutoButtonColor = false
+SideTitle.Parent = MainFrame
+
+local SideTitleText = Instance.new("TextLabel")
+SideTitleText.Size = UDim2.new(0, 150, 0, 18)
+SideTitleText.Position = UDim2.new(0, 0, 0, 0)
+SideTitleText.Text = "MagicAlay"
+SideTitleText.Font = Enum.Font.GothamBold
+SideTitleText.TextSize = 14
+SideTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+SideTitleText.TextXAlignment = Enum.TextXAlignment.Left
+SideTitleText.BackgroundTransparency = 1
+SideTitleText.Parent = SideTitle
+
+-- เครดิตใต้ชื่อสคริปต์ที่จะวนลูปเปลี่ยนข้อความเรื่อยๆ
+local SideSub = Instance.new("TextLabel")
+SideSub.Size = UDim2.new(0, 300, 0, 14)
+SideSub.Position = UDim2.new(0, 0, 0, 18)
+SideSub.Text = "MagicAlay Official"
+SideSub.Font = Enum.Font.GothamMedium
+SideSub.TextSize = 9
+SideSub.TextColor3 = Color3.fromRGB(160, 160, 185)
+SideSub.TextXAlignment = Enum.TextXAlignment.Left
+SideSub.BackgroundTransparency = 1
+SideSub.Parent = SideTitle
+
+-- ระบบวนลูปเปลี่ยนข้อความเครดิต
+task.spawn(function()
+    local credits = {
+        "MagicAlay Official",
+        "Dev.Sky",
+        "Aek",
+        "Saisansk",
+        "MagicAlay"
+    }
+    local index = 1
+    while true do
+        SideSub.Text = credits[index]
+        index = index + 1
+        if index > #credits then
+            index = 1
+        end
+        task.wait(2) -- เปลี่ยนข้อความทุกๆ 2 วินาที (ปรับเวลาได้ตามต้องการ)
+    end
+end)
+
+local frameDragging = false
+local frameDragInput, frameDragStart, frameStartPos
+
+SideTitle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        frameDragging = true
+        frameDragStart = input.Position
+        frameStartPos = MainFrame.Position
+        frameDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if frameDragging and (input == frameDragInput or input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - frameDragStart
+        MainFrame.Position = UDim2.new(
+            frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X,
+            frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input == frameDragInput or input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        frameDragging = false
+    end
+end)
+
+-- แถบเมนูด้านข้างซ้าย (Sidebar Tab Bar - หน้า Main)
+local TabButtonContainer = Instance.new("ScrollingFrame")
+TabButtonContainer.Name = "TabButtonContainer"
+TabButtonContainer.Size = UDim2.new(0, 115, 1, -68)
+TabButtonContainer.Position = UDim2.new(0, 10, 0, 56)
+TabButtonContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TabButtonContainer.BackgroundTransparency = 0.5
+TabButtonContainer.ScrollBarThickness = 0
+TabButtonContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+TabButtonContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+TabButtonContainer.Parent = MainFrame
+
+Instance.new("UICorner", TabButtonContainer).CornerRadius = UDim.new(0, 14)
+
+local TabListLayout = Instance.new("UIListLayout", TabButtonContainer)
+TabListLayout.Padding = UDim.new(0, 6)
+TabListLayout.FillDirection = Enum.FillDirection.Vertical
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+
+local PagesFolder = Instance.new("Folder")
+PagesFolder.Name = "PagesFolder"
+PagesFolder.Parent = MainFrame
+
+local function CreateTab(tabName, tabIconId)
+    local TabButton = Instance.new("TextButton")
+    TabButton.Name = tabName .. "TabBtn"
+    TabButton.Size = UDim2.new(1, -10, 0, 36)
+    TabButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TabButton.BackgroundTransparency = 0.82
+    TabButton.Text = ""
+    TabButton.AutoButtonColor = false
+    TabButton.Parent = TabButtonContainer
+
+    Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 10)
+
+    local TabIcon = Instance.new("ImageLabel")
+    TabIcon.Size = UDim2.new(0, 16, 0, 16)
+    TabIcon.Position = UDim2.new(0, 10, 0.5, -8)
+    TabIcon.BackgroundTransparency = 1
+    TabIcon.Image = "rbxassetid://" .. tostring(tabIconId)
+    TabIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    TabIcon.Parent = TabButton
+
+    local TabLabel = Instance.new("TextLabel")
+    TabLabel.Size = UDim2.new(1, -32, 1, 0)
+    TabLabel.Position = UDim2.new(0, 30, 0, 0)
+    TabLabel.Text = tabName
+    TabLabel.Font = Enum.Font.GothamMedium
+    TabLabel.TextSize = 11
+    TabLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TabLabel.BackgroundTransparency = 1
+    TabLabel.Parent = TabButton
+
+    local ContentArea = Instance.new("ScrollingFrame")
+    ContentArea.Name = tabName .. "Page"
+    ContentArea.Size = UDim2.new(1, -145, 1, -68)
+    ContentArea.Position = UDim2.new(0, 135, 0, 56)
+    ContentArea.BackgroundTransparency = 1
+    ContentArea.ScrollBarThickness = 2
+    ContentArea.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ContentArea.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ContentArea.Visible = true
+    ContentArea.Parent = PagesFolder
+
+    local ContentList = Instance.new("UIListLayout", ContentArea)
+    ContentList.Padding = UDim.new(0, 8)
+    ContentList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    return ContentArea
+end
+
+-- ฟังก์ชันสร้างปุ่มสลับเปิด-ปิด (Toggle Switch)
+local function CreateIOSToggle(parent, titleText, defaultState, callback)
+    local Card = Instance.new("TextButton")
+    Card.Size = UDim2.new(1, -10, 0, 42)
+    Card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Card.BackgroundTransparency = 0.92
+    Card.Text = ""
+    Card.AutoButtonColor = false
+    Card.Parent = parent
+    Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 12)
+
+    local CardStroke = Instance.new("UIStroke", Card)
+    CardStroke.Color = Color3.fromRGB(255, 255, 255)
+    CardStroke.Thickness = 1
+    CardStroke.Transparency = 0.85
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -60, 1, 0)
+    Title.Position = UDim2.new(0, 12, 0, 0)
+    Title.Text = titleText
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 11
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.BackgroundTransparency = 1
+    Title.Parent = Card
+
+    local SwitchTrack = Instance.new("Frame")
+    SwitchTrack.Size = UDim2.new(0, 40, 0, 22)
+    SwitchTrack.Position = UDim2.new(1, -48, 0.5, -11)
+    SwitchTrack.BackgroundColor3 = defaultState and Color3.fromRGB(52, 199, 123) or Color3.fromRGB(60, 60, 75)
+    SwitchTrack.Parent = Card
+    Instance.new("UICorner", SwitchTrack).CornerRadius = UDim.new(1, 0)
+
+    local SwitchKnob = Instance.new("Frame")
+    SwitchKnob.Size = UDim2.new(0, 18, 0, 18)
+    SwitchKnob.Position = defaultState and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+    SwitchKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SwitchKnob.Parent = SwitchTrack
+    Instance.new("UICorner", SwitchKnob).CornerRadius = UDim.new(1, 0)
+
+    local toggled = defaultState
+
+    Card.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        if toggled then
+            TweenService:Create(SwitchTrack, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(52, 199, 123)}):Play()
+            TweenService:Create(SwitchKnob, TweenInfo.new(0.2), {Position = UDim2.new(1, -20, 0.5, -9)}):Play()
+        else
+            TweenService:Create(SwitchTrack, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 75)}):Play()
+            TweenService:Create(SwitchKnob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -9)}):Play()
+        end
+        if callback then callback(toggled) end
+    end)
+end
+
+-- สร้างหน้า Main
+local MainTab = CreateTab("Main", 130068439240504)
+
+-- ==========================================
+-- ฟังก์ชัน Auto IncreaseSpeed
+-- ==========================================
+local autoIncreaseSpeedEnabled = false
+task.spawn(function()
+    while true do
+        if autoIncreaseSpeedEnabled then
+            for i = 1, 5 do
+                task.spawn(function()
+                    pcall(function()
+                        ReplicatedStorage.IncreaseSpeed:FireServer()
+                    end)
+                end)
+            end
+        end
+        RunService.RenderStepped:Wait()
+    end
+end)
+
+-- ==========================================
+-- ฟังก์ชัน Auto Treadmill Toggle
+-- ==========================================
+local autoTreadmillToggleEnabled = false
+task.spawn(function()
+    while true do
+        if autoTreadmillToggleEnabled then
+            for i = 1, 5 do
+                task.spawn(function()
+                    pcall(function()
+                        local args = {
+                            [1] = true,
+                            n = 1,
+                        }
+                        ReplicatedStorage.TreadmillEvents.Toggle:FireServer(unpack(args, 1, args.n or #args))
+                    end)
+                end)
+            end
+        end
+        RunService.RenderStepped:Wait()
+    end
+end)
+
+-- ==========================================
+-- ฟังก์ชัน Auto Click
+-- ==========================================
+local autoClickEnabled = false
+task.spawn(function()
+    while true do
+        if autoClickEnabled then
+            for i = 1, 5 do
+                task.spawn(function()
+                    pcall(function()
+                        local args = {
+                            [1] = true,
+                            n = 1,
+                        }
+                        ReplicatedStorage.AutoClick:FireServer(unpack(args, 1, args.n or #args))
+                    end)
+                end)
+            end
+        end
+        RunService.RenderStepped:Wait()
+    end
+end)
+
+-- ==========================================
+-- ฟังก์ชัน Auto Win (สลับวาร์ปรัวๆ ระหว่าง ObbyTower และ World1)
+-- ==========================================
+local autoWinEnabled = false
+task.spawn(function()
+    while true do
+        if autoWinEnabled then
+            pcall(function()
+                local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if rootPart then
+                    local obbyObj = Workspace:FindFirstChild("ObbyTower", true)
+                    if obbyObj then
+                        if obbyObj:IsA("Model") then
+                            local primaryPart = obbyObj.PrimaryPart or obbyObj:FindFirstChildWhichIsA("BasePart")
+                            if primaryPart then rootPart.CFrame = primaryPart.CFrame + Vector3.new(0, 3, 0) end
+                        elseif obbyObj:IsA("BasePart") then
+                            rootPart.CFrame = obbyObj.CFrame + Vector3.new(0, 3, 0)
+                        end
+                    end
+                end
+            end)
+            task.wait(0.05)
+            
+            if not autoWinEnabled then break end
+            
+            pcall(function()
+                local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if rootPart then
+                    local world1Obj = Workspace:FindFirstChild("World1", true)
+                    if world1Obj then
+                        if world1Obj:IsA("Model") then
+                            local primaryPart = world1Obj.PrimaryPart or world1Obj:FindFirstChildWhichIsA("BasePart")
+                            if primaryPart then rootPart.CFrame = primaryPart.CFrame + Vector3.new(0, 3, 0) end
+                        elseif world1Obj:IsA("BasePart") then
+                            rootPart.CFrame = world1Obj.CFrame + Vector3.new(0, 3, 0)
+                        end
+                    end
+                end
+            end)
+            task.wait(0.05)
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+-- ==========================================
+-- ฟังก์ชัน Auto World Teleport (World1 - World19 วนลูป)
+-- ==========================================
+local autoWorldTeleportEnabled = false
+task.spawn(function()
+    while true do
+        if autoWorldTeleportEnabled then
+            for i = 1, 19 do
+                if not autoWorldTeleportEnabled then break end
+                pcall(function()
+                    local worldName = "World" .. i
+                    local targetObj = Workspace:FindFirstChild(worldName, true)
+
+                    if targetObj then
+                        local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if rootPart then
+                            if targetObj:IsA("Model") then
+                                local primaryPart = targetObj.PrimaryPart or targetObj:FindFirstChild("HumanoidRootPart") or targetObj:FindFirstChildWhichIsA("BasePart")
+                                if primaryPart then
+                                    rootPart.CFrame = primaryPart.CFrame + Vector3.new(0, 3, 0)
+                                end
+                            elseif targetObj:IsA("BasePart") then
+                                rootPart.CFrame = targetObj.CFrame + Vector3.new(0, 3, 0)
+                            end
+                        end
+                    end
+                end)
+                task.wait(0.1)
+            end
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+-- เพิ่มปุ่มฟังก์ชันใช้งานจริง
+CreateIOSToggle(MainTab, "Auto Increase Speed", false, function(state)
+    autoIncreaseSpeedEnabled = state
+end)
+
+CreateIOSToggle(MainTab, "Auto Treadmill Toggle", false, function(state)
+    autoTreadmillToggleEnabled = state
+end)
+
+CreateIOSToggle(MainTab, "Auto Click (Spam)", false, function(state)
+    autoClickEnabled = state
+end)
+
+CreateIOSToggle(MainTab, "Auto Win (ObbyTower & World1)", false, function(state)
+    autoWinEnabled = state
+end)
+
+CreateIOSToggle(MainTab, "Auto World Teleport (1-19)", false, function(state)
+    autoWorldTeleportEnabled = state
+end)
+
+local function ToggleHub()
+    isOpen = not isOpen
+    UpdateBlurState()
+    if isOpen then
+        MainFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 0, 0, HubHeight)
+        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, HubWidth, 0, HubHeight)}):Play()
+    else
+        Camera.FieldOfView = OriginalFOV
+        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 0, HubHeight)})
+        tween:Play()
+        tween.Completed:Connect(function()
+            if not isOpen then MainFrame.Visible = false end
+        end)
+    end
+end
+
+-- ปุ่มลอย (Float Button) สำหรับเปิด-ปิด Hub
+local FloatBtn = Instance.new("ImageButton")
+FloatBtn.Name = "FloatButton"
+FloatBtn.Size = UDim2.new(0, 52, 0, 52)
+FloatBtn.Position = UDim2.new(0, 12, 0.5, -26)
+FloatBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+FloatBtn.BackgroundTransparency = 0.2
+FloatBtn.Image = "rbxassetid://103143683174616"
+FloatBtn.ScaleType = Enum.ScaleType.Crop
+FloatBtn.Active = true
+FloatBtn.Parent = ScreenGui
+
+Instance.new("UICorner", FloatBtn).CornerRadius = UDim.new(1, 0)
+local FloatStroke = Instance.new("UIStroke", FloatBtn)
+FloatStroke.Color = Color3.fromRGB(255, 255, 255)
+FloatStroke.Thickness = 1.5
+FloatStroke.Transparency = 0.5
+
+local floatDragging = false
+local floatDragInput, floatDragStart, floatStartPos
+local floatMoved = false
+
+FloatBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        floatDragging = true
+        floatMoved = false
+        floatDragStart = input.Position
+        floatStartPos = FloatBtn.Position
+        floatDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if floatDragging and (input == floatDragInput or input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - floatDragStart
+        if delta.Magnitude > 6 then 
+            floatMoved = true 
+            FloatBtn.Position = UDim2.new(
+                floatStartPos.X.Scale, floatStartPos.X.Offset + delta.X,
+                floatStartPos.Y.Scale, floatStartPos.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input == floatDragInput or input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        floatDragging = false
+    end
+end)
+
+FloatBtn.MouseButton1Click:Connect(function()
+    if not floatMoved then
+        ToggleHub()
+    end
+end)
