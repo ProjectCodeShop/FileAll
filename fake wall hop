@@ -1,0 +1,377 @@
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 1. Create iOS Glassmorphism UI Frame (MagicAlay)
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MagicAlayGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Toggle Button (ปุ่มเปิด-ปิด UI แบบลากได้)
+local toggleButton = Instance.new("ImageButton")
+toggleButton.Size = UDim2.new(0, 42, 0, 42)
+toggleButton.Position = UDim2.new(1, -60, 0.03, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+toggleButton.BackgroundTransparency = 0.2
+toggleButton.Image = "rbxassetid://134610671303702"
+toggleButton.AutoButtonColor = false
+toggleButton.Active = true
+toggleButton.Draggable = true
+toggleButton.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(1, 0)
+toggleCorner.Parent = toggleButton
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(255, 255, 255)
+toggleStroke.Transparency = 0.7
+toggleStroke.Thickness = 1.2
+toggleStroke.Parent = toggleButton
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 210, 0, 295)
+mainFrame.Position = UDim2.new(0.03, 0, 0.25, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+mainFrame.BackgroundTransparency = 0.12
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 18)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(255, 255, 255)
+mainStroke.Transparency = 0.75
+mainStroke.Thickness = 1.2
+mainStroke.Parent = mainFrame
+
+-- Banner Image
+local bannerImage = Instance.new("ImageLabel")
+bannerImage.Size = UDim2.new(1, 0, 0, 70)
+bannerImage.BackgroundTransparency = 1
+bannerImage.Image = "rbxassetid://121648302029106"
+bannerImage.ScaleType = Enum.ScaleType.Crop
+bannerImage.ClipsDescendants = true
+bannerImage.Parent = mainFrame
+
+local bannerCorner = Instance.new("UICorner")
+bannerCorner.CornerRadius = UDim.new(0, 18)
+bannerCorner.Parent = bannerImage
+
+-- Gradient Fade ทับแบนเนอร์ให้กลืนกับพื้นหลัง
+local bannerGradient = Instance.new("UIGradient")
+bannerGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.1),
+    NumberSequenceKeypoint.new(0.7, 0.3),
+    NumberSequenceKeypoint.new(1, 1)
+})
+bannerGradient.Rotation = 90
+bannerGradient.Parent = bannerImage
+
+-- Logo Icon
+local logoIcon = Instance.new("ImageLabel")
+logoIcon.Size = UDim2.new(0, 30, 0, 30)
+logoIcon.Position = UDim2.new(0, 12, 0, 78)
+logoIcon.BackgroundTransparency = 1
+logoIcon.Image = "rbxassetid://134610671303702"
+logoIcon.Parent = mainFrame
+
+local logoCorner = Instance.new("UICorner")
+logoCorner.CornerRadius = UDim.new(0, 8)
+logoCorner.Parent = logoIcon
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -56, 0, 18)
+titleLabel.Position = UDim2.new(0, 50, 0, 78)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "MagicAlay"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainFrame
+
+local devLabel = Instance.new("TextLabel")
+devLabel.Size = UDim2.new(1, -56, 0, 14)
+devLabel.Position = UDim2.new(0, 50, 0, 95)
+devLabel.BackgroundTransparency = 1
+devLabel.Text = "Dev: Sky, Aek, Saisansk, weir"
+devLabel.TextColor3 = Color3.fromRGB(160, 160, 175)
+devLabel.TextSize = 8.5
+devLabel.Font = Enum.Font.GothamMedium
+devLabel.TextXAlignment = Enum.TextXAlignment.Left
+devLabel.Parent = mainFrame
+
+-- Separator Line
+local separator = Instance.new("Frame")
+separator.Size = UDim2.new(0.9, 0, 0, 1)
+separator.Position = UDim2.new(0.05, 0, 0, 118)
+separator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+separator.BackgroundTransparency = 0.85
+separator.BorderSizePixel = 0
+separator.Parent = mainFrame
+
+-- ฟังก์ชันสร้างปุ่มสวิตช์ iOS ดีไซน์พรีเมียม
+local function createIOSSwitchRow(text, posy, parent)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(0.9, 0, 0, 28)
+    container.Position = UDim2.new(0.05, 0, 0, posy)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.65, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(235, 235, 245)
+    label.TextSize = 9.5
+    label.Font = Enum.Font.GothamMedium
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = container
+
+    local switchBG = Instance.new("TextButton")
+    switchBG.Size = UDim2.new(0, 40, 0, 22)
+    switchBG.Position = UDim2.new(1, -40, 0.5, -11)
+    switchBG.BackgroundColor3 = Color3.fromRGB(50, 50, 56)
+    switchBG.Text = ""
+    switchBG.AutoButtonColor = false
+    switchBG.Parent = container
+
+    local switchCorner = Instance.new("UICorner")
+    switchCorner.CornerRadius = UDim.new(1, 0)
+    switchCorner.Parent = switchBG
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 18, 0, 18)
+    knob.Position = UDim2.new(0, 2, 0.5, -9)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.Parent = switchBG
+
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(1, 0)
+    knobCorner.Parent = knob
+
+    return switchBG, knob
+end
+
+local fakeWallHopSwitch, fakeWallHopKnob = createIOSSwitchRow("Fake Wall Hop", 132, mainFrame)
+local targetSwitch, targetKnob = createIOSSwitchRow("Click Target", 172, mainFrame)
+local autoPathSwitch, autoPathKnob = createIOSSwitchRow("Auto Wall Hop Target", 212, mainFrame)
+
+local fakeActive = false
+local targetModeActive = false
+local autoPathActive = false
+
+local targetPosition = nil
+local targetMarker = nil
+local turnToggle = 0
+local lastHopTime = 0
+
+-- ฟังก์ชันเปิด-ปิด UI หลัก
+local uiVisible = true
+local isDraggingToggle = false
+
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDraggingToggle = false
+    end
+end)
+
+toggleButton.Changed:Connect(function(property)
+    if property == "Position" then
+        isDraggingToggle = true
+    end
+end)
+
+toggleButton.MouseButton1Click:Connect(function()
+    if isDraggingToggle then return end
+    uiVisible = not uiVisible
+    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    if uiVisible then
+        mainFrame.Visible = true
+        TweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, 210, 0, 295), BackgroundTransparency = 0.12}):Play()
+    else
+        local hideTween = TweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1})
+        hideTween:Play()
+        hideTween.Completed:Connect(function()
+            if not uiVisible then mainFrame.Visible = false end
+        end)
+    end
+end)
+
+-- อนิเมชั่นสวิตช์แบบสมูท
+local function setSwitchState(switchBG, knob, state)
+    local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    if state then
+        TweenService:Create(switchBG, tweenInfo, {BackgroundColor3 = Color3.fromRGB(52, 199, 89)}):Play()
+        TweenService:Create(knob, tweenInfo, {Position = UDim2.new(1, -20, 0.5, -9)}):Play()
+    else
+        TweenService:Create(switchBG, tweenInfo, {BackgroundColor3 = Color3.fromRGB(50, 50, 56)}):Play()
+        TweenService:Create(knob, tweenInfo, {Position = UDim2.new(0, 2, 0.5, -9)}):Play()
+    end
+end
+
+-- เปิดตัว UI ด้วยอนิเมชั่น Smooth Fade & Scale
+mainFrame.Size = UDim2.new(0, 0, 0, 0)
+mainFrame.BackgroundTransparency = 1
+TweenService:Create(mainFrame, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 210, 0, 295),
+    BackgroundTransparency = 0.12
+}):Play()
+
+fakeWallHopSwitch.MouseButton1Click:Connect(function()
+    fakeActive = not fakeActive
+    setSwitchState(fakeWallHopSwitch, fakeWallHopKnob, fakeActive)
+end)
+
+targetSwitch.MouseButton1Click:Connect(function()
+    targetModeActive = not targetModeActive
+    setSwitchState(targetSwitch, targetKnob, targetModeActive)
+end)
+
+autoPathSwitch.MouseButton1Click:Connect(function()
+    if not targetPosition then return end
+    autoPathActive = not autoPathActive
+    setSwitchState(autoPathSwitch, autoPathKnob, autoPathActive)
+end)
+
+mouse.Button1Down:Connect(function()
+    if targetModeActive and mouse.Target then
+        targetPosition = mouse.Hit.Position + Vector3.new(0, 2, 0)
+        if targetMarker then targetMarker:Destroy() end
+        
+        targetMarker = Instance.new("Part")
+        targetMarker.Name = "MagicAlayMarker"
+        targetMarker.Size = Vector3.new(1.2, 1.2, 1.2)
+        targetMarker.Position = targetPosition
+        targetMarker.Anchored = true
+        targetMarker.CanCollide = false
+        targetMarker.Material = Enum.Material.Neon
+        targetMarker.Color = Color3.fromRGB(52, 199, 89)
+        targetMarker.Transparency = 0.3
+        targetMarker.Parent = workspace
+        
+        targetModeActive = false
+        setSwitchState(targetSwitch, targetKnob, false)
+    end
+end)
+
+local function scanSmartAIWall(hrp, character)
+    local rayParams = RaycastParams.new()
+    rayParams.FilterDescendantsInstances = {character, targetMarker}
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+
+    local angles = {0, 30, -30, 60, -60, 90, -90, 120, -120, 180}
+    for _, angle in ipairs(angles) do
+        local rotatedLook = (CFrame.Angles(0, math.rad(angle), 0) * hrp.CFrame.LookVector).Unit
+        local result = workspace:Raycast(hrp.Position, rotatedLook * 4.5, rayParams)
+        if result and result.Instance and result.Instance.CanCollide then
+            return result
+        end
+    end
+    return nil
+end
+
+-- 1. Fake Wall Hop (ปิด AutoRotate แล้วสะบัดตัวละครหันซ้าย-ขวา/หันหลังกลับแบบฉับพลัน พร้อมพุ่งตัว)
+UserInputService.JumpRequest:Connect(function()
+    local character = player.Character
+    if not character or not character:FindFirstChild("Humanoid") or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local humanoid = character.Humanoid
+    local hrp = character.HumanoidRootPart
+
+    if fakeActive and not autoPathActive then
+        local wallHit = scanSmartAIWall(hrp, character)
+        
+        if wallHit then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            humanoid.Jump = true
+
+            -- ปิดการหมุนตัวออโต้ของเกมชั่วคราว เพื่อให้เราบังคับทิศทางตัวละครเองได้เต็มที่
+            humanoid.AutoRotate = false
+
+            turnToggle = (turnToggle + 1) % 4
+            -- มุมสะบัดตัวละคร: หันขวา 90°, หันซ้าย -90°, หันหลังกลับ 180°
+            local snapAngles = {90, -90, 180, -90}
+            local snapAngle = snapAngles[turnToggle + 1]
+
+            -- หมุนตัวละคร (ตัวละครจะสะบัดหันข้าง/หันหลังจริงทันทีโดยกล้องไม่ขยับตาม)
+            hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(snapAngle), 0)
+            
+            -- อัดแรงพุ่งตัวและดีดตัวขึ้นฟ้า
+            local lookDir = hrp.CFrame.LookVector
+            hrp.AssemblyLinearVelocity = Vector3.new(lookDir.X * 22, 38, lookDir.Z * 22)
+
+            -- เปิด AutoRotate กลับมาเหมือนเดิมหลังจากสะบัดเสร็จ 0.15 วิ
+            task.delay(0.15, function()
+                if humanoid then
+                    humanoid.AutoRotate = true
+                end
+            end)
+        end
+    end
+end)
+
+-- 2. AI Smart Auto Wall Hop Target (ออโต้สะบัดตัวละครหันข้าง/หันหลังไต่กำแพงรัวๆ)
+RunService.Stepped:Connect(function()
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then return end
+    
+    local hrp = character.HumanoidRootPart
+    local humanoid = character.Humanoid
+    local now = tick()
+
+    if autoPathActive and targetPosition then
+        local horizontalDist = (Vector3.new(targetPosition.X, 0, targetPosition.Z) - Vector3.new(hrp.Position.X, 0, hrp.Position.Z)).Magnitude
+        local heightDiff = math.abs(targetPosition.Y - hrp.Position.Y)
+
+        if horizontalDist < 3.5 and heightDiff < 5.0 then
+            autoPathActive = false
+            if targetMarker then targetMarker:Destroy() targetMarker = nil end
+            targetPosition = nil
+            setSwitchState(autoPathSwitch, autoPathKnob, false)
+            humanoid:Move(Vector3.new(0, 0, 0))
+            return
+        end
+
+        local wallHit = scanSmartAIWall(hrp, character)
+        local direction = (targetPosition - hrp.Position).Unit
+
+        if wallHit then
+            if now - lastHopTime >= 0.07 then
+                lastHopTime = now
+
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                humanoid.Jump = true
+                humanoid.AutoRotate = false
+
+                turnToggle = (turnToggle + 1) % 4
+                local snapAngles = {90, -90, 180, -90}
+                local snapAngle = snapAngles[turnToggle + 1]
+
+                -- สะบัดตัวละครหันซ้ายขวา/หันหลังไต่กำแพง
+                hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + direction) * CFrame.Angles(0, math.rad(snapAngle), 0)
+                hrp.AssemblyLinearVelocity = Vector3.new(direction.X * 25, 40, direction.Z * 25)
+
+                task.delay(0.12, function()
+                    if humanoid then
+                        humanoid.AutoRotate = true
+                    end
+                end)
+            end
+        else
+            humanoid:MoveTo(targetPosition)
+        end
+    end
+end)
