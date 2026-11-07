@@ -1,0 +1,514 @@
+-- โค้ด UI สไตล์ MagicAlay (Home: WalkSpeed, JumpPower / Farm: Swing Katana, TP Hoops, TP Coins (spawnedCoins), Auto Sell)
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+
+local localPlayer = Players.LocalPlayer
+
+if CoreGui:FindFirstChild("MagicalayFloatingCleanUI") then
+    CoreGui.MagicalayFloatingCleanUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MagicalayFloatingCleanUI"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Main Window (ขนาด 520x310 กะทัดรัด)
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 520, 0, 310)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 6)
+MainCorner.Parent = MainFrame
+
+-- [แบนเนอร์พื้นหลัง]
+local BannerBackground = Instance.new("ImageLabel")
+BannerBackground.Name = "BannerBackground"
+BannerBackground.Parent = MainFrame
+BannerBackground.BackgroundTransparency = 1
+BannerBackground.Size = UDim2.new(1, 0, 1, 0)
+BannerBackground.Image = "rbxassetid://121648302029106"
+BannerBackground.ScaleType = Enum.ScaleType.Crop
+
+-- Logo ด้านบนซ้าย
+local Logo = Instance.new("TextLabel")
+Logo.Parent = MainFrame
+Logo.BackgroundTransparency = 1
+Logo.Position = UDim2.new(0, 12, 0, 10)
+Logo.Size = UDim2.new(0, 110, 0, 18)
+Logo.Font = Enum.Font.GothamBold
+Logo.Text = "MagicAlay"
+Logo.TextColor3 = Color3.fromRGB(130, 105, 255)
+Logo.TextSize = 14
+Logo.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Footer ด้านล่าง
+local Footer = Instance.new("TextLabel")
+Footer.Parent = MainFrame
+Footer.BackgroundTransparency = 1
+Footer.Position = UDim2.new(0, 12, 1, -16)
+Footer.Size = UDim2.new(0, 260, 0, 14)
+Footer.Font = Enum.Font.Gotham
+Footer.Text = "MagicAlay Official : Aek,Sky,Saisansk"
+Footer.TextColor3 = Color3.fromRGB(65, 65, 75)
+Footer.TextSize = 8
+Footer.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Version Text ด้านล่างขวา
+local VersionText = Instance.new("TextLabel")
+VersionText.Parent = MainFrame
+VersionText.BackgroundTransparency = 1
+VersionText.Position = UDim2.new(1, -125, 1, -16)
+VersionText.Size = UDim2.new(0, 115, 0, 14)
+VersionText.Font = Enum.Font.Gotham
+VersionText.Text = "ScripterPro, MagicAlay"
+VersionText.TextColor3 = Color3.fromRGB(65, 65, 75)
+VersionText.TextSize = 8
+VersionText.TextXAlignment = Enum.TextXAlignment.Right
+
+-- [ปุ่มไอคอนวงกลมลอยเปิด-ปิด UI]
+local OpenButton = Instance.new("ImageButton")
+OpenButton.Parent = ScreenGui
+OpenButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+OpenButton.Position = UDim2.new(0, 50, 0, 50)
+OpenButton.Size = UDim2.new(0, 45, 0, 45)
+OpenButton.Active = true
+OpenButton.Draggable = true
+OpenButton.Image = "rbxassetid://134610671303702"
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(1, 0)
+OpenCorner.Parent = OpenButton
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(255, 255, 255)
+OpenStroke.Thickness = 1.5
+OpenStroke.Parent = OpenButton
+
+-- [ระบบอนิเมชันเปิด-ปิด ย่อ-ขยาย]
+local uiVisible = true
+local isAnimating = false
+local defaultSize = UDim2.new(0, 520, 0, 310)
+local defaultPos = UDim2.new(0.5, -260, 0.5, -155)
+
+OpenButton.MouseButton1Click:Connect(function()
+    if isAnimating then return end
+    isAnimating = true
+    uiVisible = not uiVisible
+
+    -- อนิเมชันปุ่มตอนกด
+    OpenButton:TweenSize(UDim2.new(0, 38, 0, 38), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.08, true, function()
+        OpenButton:TweenSize(UDim2.new(0, 45, 0, 45), Enum.EasingDirection.Out, Enum.EasingStyle.Back, 0.12, true)
+    end)
+
+    if uiVisible then
+        MainFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 0, 0, 0)
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(MainFrame, tweenInfo, {
+            Size = defaultSize,
+            Position = defaultPos
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            isAnimating = false
+        end)
+    else
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        local tween = TweenService:Create(MainFrame, tweenInfo, {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0)
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            MainFrame.Visible = false
+            MainFrame.Size = defaultSize
+            MainFrame.Position = defaultPos
+            isAnimating = false
+        end)
+    end
+end)
+
+-- พื้นที่แสดงเนื้อหา (2 หน้า: Home และ Farm)
+local ContentPages = {}
+local function createPage(name)
+    local page = Instance.new("Frame")
+    page.Name = name .. "Page"
+    page.Parent = MainFrame
+    page.BackgroundTransparency = 1
+    page.Position = UDim2.new(0, 115, 0, 12)
+    page.Size = UDim2.new(0, 390, 0, 280)
+    page.Visible = false
+    ContentPages[name] = page
+    return page
+end
+
+local homePage = createPage("Home")
+local farmPage = createPage("Farm")
+
+homePage.Visible = true
+
+-- Sidebar เมนูด้านซ้าย (Home กับ Farm)
+local Sidebar = Instance.new("Frame")
+Sidebar.Parent = MainFrame
+Sidebar.BackgroundTransparency = 1
+Sidebar.Position = UDim2.new(0, 12, 0, 36)
+Sidebar.Size = UDim2.new(0, 95, 0, 255)
+
+local menuItems = {"Home", "Farm"}
+local sidebarButtons = {}
+
+local function addSidebarLabel(text, y)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = Sidebar
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0, 0, 0, y)
+    lbl.Size = UDim2.new(0, 95, 0, 14)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(80, 80, 90)
+    lbl.TextSize = 9
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+end
+
+addSidebarLabel("Categories", 0)
+
+for i, menuName in ipairs(menuItems) do
+    local btn = Instance.new("TextButton")
+    btn.Parent = Sidebar
+    btn.BackgroundColor3 = (i == 1) and Color3.fromRGB(28, 28, 35) or Color3.fromRGB(20, 20, 25)
+    btn.Position = UDim2.new(0, 0, 0, 20 + ((i - 1) * 30))
+    btn.Size = UDim2.new(0, 95, 0, 24)
+    btn.Font = Enum.Font.GothamMedium
+    btn.Text = "  " .. menuName
+    btn.TextColor3 = (i == 1) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(120, 120, 130)
+    btn.TextSize = 9
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 4)
+    c.Parent = btn
+    
+    sidebarButtons[menuName] = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        for name, b in pairs(sidebarButtons) do
+            if name == menuName then
+                b.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+                b.TextColor3 = Color3.fromRGB(255, 255, 255)
+            else
+                b.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+                b.TextColor3 = Color3.fromRGB(120, 120, 130)
+            end
+        end
+        for name, page in pairs(ContentPages) do
+            page.Visible = (name == menuName)
+        end
+    end)
+end
+
+-- ฟังก์ชันสร้างกล่องฟีเจอร์
+local function createBox(parent, x, y, width, height, title)
+    local Box = Instance.new("Frame")
+    Box.Parent = parent
+    Box.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    Box.Position = UDim2.new(0, x, 0, y)
+    Box.Size = UDim2.new(0, width, 0, height)
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 5)
+    Corner.Parent = Box
+    
+    local Title = Instance.new("TextLabel")
+    Title.Parent = Box
+    Title.BackgroundTransparency = 1
+    Title.Position = UDim2.new(0, 8, 0, 6)
+    Title.Size = UDim2.new(0, width - 16, 0, 14)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = title
+    Title.TextColor3 = Color3.fromRGB(170, 170, 180)
+    Title.TextSize = 9
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local Line = Instance.new("Frame")
+    Line.Parent = Box
+    Line.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+    Line.BorderSizePixel = 0
+    Line.Position = UDim2.new(0, 8, 0, 22)
+    Line.Size = UDim2.new(0, width - 16, 0, 1)
+    
+    return Box
+end
+
+-- ฟังก์ชันสร้าง Toggle
+local function addToggle(box, text, yPos, callback)
+    local Row = Instance.new("TextButton")
+    Row.Parent = box
+    Row.BackgroundTransparency = 1
+    Row.Position = UDim2.new(0, 8, 0, yPos)
+    Row.Size = UDim2.new(0, box.AbsoluteSize.X - 16, 0, 18)
+    Row.Font = Enum.Font.Gotham
+    Row.Text = text
+    Row.TextColor3 = Color3.fromRGB(160, 160, 170)
+    Row.TextSize = 9
+    Row.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local chk = Instance.new("Frame")
+    chk.Parent = Row
+    chk.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+    chk.Position = UDim2.new(1, -12, 0, 2)
+    chk.Size = UDim2.new(0, 10, 0, 10)
+    local chc = Instance.new("UICorner")
+    chc.CornerRadius = UDim.new(0, 2)
+    chc.Parent = chk
+    
+    local enabled = false
+    Row.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        chk.BackgroundColor3 = enabled and Color3.fromRGB(110, 90, 240) or Color3.fromRGB(28, 28, 35)
+        if callback then callback(enabled) end
+    end)
+end
+
+-- ฟังก์ชันสร้าง Slider
+local function addSlider(box, text, yPos, min, max, default, callback)
+    local Row = Instance.new("Frame")
+    Row.Parent = box
+    Row.BackgroundTransparency = 1
+    Row.Position = UDim2.new(0, 8, 0, yPos)
+    Row.Size = UDim2.new(0, box.AbsoluteSize.X - 16, 0, 32)
+    
+    local Label = Instance.new("TextLabel")
+    Label.Parent = Row
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 0, 0, 0)
+    Label.Size = UDim2.new(0, box.AbsoluteSize.X - 16, 0, 14)
+    Label.Font = Enum.Font.Gotham
+    Label.Text = text .. ": " .. tostring(default)
+    Label.TextColor3 = Color3.fromRGB(160, 160, 170)
+    Label.TextSize = 9
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local SliderBg = Instance.new("Frame")
+    SliderBg.Parent = Row
+    SliderBg.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    SliderBg.Position = UDim2.new(0, 0, 0, 16)
+    SliderBg.Size = UDim2.new(0, box.AbsoluteSize.X - 16, 0, 8)
+    
+    local sbc = Instance.new("UICorner")
+    sbc.CornerRadius = UDim.new(0, 4)
+    sbc.Parent = SliderBg
+    
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Parent = SliderBg
+    SliderFill.BackgroundColor3 = Color3.fromRGB(110, 90, 240)
+    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    
+    local sfc = Instance.new("UICorner")
+    sfc.CornerRadius = UDim.new(0, 4)
+    sfc.Parent = SliderFill
+    
+    local dragging = false
+    local function updateSlider(input)
+        local sizeX = SliderBg.AbsoluteSize.X
+        local pos = math.clamp((input.Position.X - SliderBg.AbsolutePosition.X) / sizeX, 0, 1)
+        SliderFill.Size = UDim2.new(pos, 0, 1, 0)
+        local val = math.floor(min + (max - min) * pos)
+        Label.Text = text .. ": " .. tostring(val)
+        if callback then callback(val) end
+    end
+    
+    SliderBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            updateSlider(input)
+        end
+    end)
+end
+
+--------------------------------------------------------------------
+-- [หมวด Home] WalkSpeed และ JumpPower
+--------------------------------------------------------------------
+local hb1 = createBox(homePage, 0, 0, 185, 120, "Movement")
+addSlider(hb1, "WalkSpeed", 28, 16, 200, 16, function(v)
+    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+        localPlayer.Character.Humanoid.WalkSpeed = v
+    end
+end)
+
+addSlider(hb1, "JumpPower", 70, 50, 300, 50, function(v)
+    if localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+        localPlayer.Character.Humanoid.UseJumpPower = true
+        localPlayer.Character.Humanoid.JumpPower = v
+    end
+end)
+
+--------------------------------------------------------------------
+-- [หมวด Farm] Katana, TP Hoops, TP Coins & Auto Sell
+--------------------------------------------------------------------
+local getNinjaEvent = function()
+    if localPlayer:FindFirstChild("ninjaEvent") then return localPlayer.ninjaEvent end
+    if localPlayer.Character and localPlayer.Character:FindFirstChild("ninjaEvent") then return localPlayer.Character.ninjaEvent end
+    if ReplicatedStorage:FindFirstChild("ninjaEvent") then return ReplicatedStorage.ninjaEvent end
+    return nil
+end
+
+-- 1. Auto Swing Katana
+local autoFarmConn = nil
+local swingArgs = {[1] = "swingKatana", n = 1}
+local fb1 = createBox(farmPage, 0, 0, 185, 130, "Auto Farm Katana")
+addToggle(fb1, "Fast Swing Katana", 28, function(enabled)
+    if enabled then
+        autoFarmConn = RunService.RenderStepped:Connect(function()
+            local ev = getNinjaEvent()
+            if ev then ev:FireServer(unpack(swingArgs, 1, swingArgs.n or #swingArgs)) end
+        end)
+    else
+        if autoFarmConn then autoFarmConn:Disconnect() autoFarmConn = nil end
+    end
+end)
+
+-- 2. ระบบ Teleport Player To Hoops
+local autoHoopConn = nil
+local fb2 = createBox(farmPage, 195, 0, 185, 130, "Auto Farm Items")
+addToggle(fb2, "Teleport Player To Hoops", 28, function(enabled)
+    if enabled then
+        autoHoopConn = task.spawn(function()
+            while task.wait(0.1) do
+                local char = localPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj.Name == "Hoop" then
+                            local targetPart = nil
+                            if obj:IsA("BasePart") then
+                                targetPart = obj
+                            elseif obj:IsA("Model") then
+                                targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                            end
+                            
+                            if targetPart and char:FindFirstChild("HumanoidRootPart") then
+                                char.HumanoidRootPart.CFrame = targetPart.CFrame
+                                task.wait(0.2)
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    else
+        if autoHoopConn then
+            task.cancel(autoHoopConn)
+            autoHoopConn = nil
+        end
+    end
+end)
+
+-- 3. ระบบ Teleport Collect Coins (ดึงข้อมูลจาก spawnedCoins -> Duel Arena & Valley)
+local autoCoinConn = nil
+addToggle(fb2, "Teleport Collect Coins", 50, function(enabled)
+    if enabled then
+        autoCoinConn = task.spawn(function()
+            while task.wait(0.1) do
+                local char = localPlayer.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local spawnedCoins = Workspace:FindFirstChild("spawnedCoins")
+                    if spawnedCoins then
+                        local targetFolders = {"Duel Arena", "Valley"}
+                        for _, folderName in ipairs(targetFolders) do
+                            local folder = spawnedCoins:FindFirstChild(folderName)
+                            if folder then
+                                for _, coin in ipairs(folder:GetDescendants()) do
+                                    local targetPart = nil
+                                    if coin:IsA("BasePart") then
+                                        targetPart = coin
+                                    elseif coin:IsA("Model") then
+                                        targetPart = coin.PrimaryPart or coin:FindFirstChildWhichIsA("BasePart")
+                                    end
+
+                                    if targetPart and char:FindFirstChild("HumanoidRootPart") then
+                                        char.HumanoidRootPart.CFrame = targetPart.CFrame
+                                        task.wait(0.15)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    else
+        if autoCoinConn then
+            task.cancel(autoCoinConn)
+            autoCoinConn = nil
+        end
+    end
+end)
+
+-- 4. ระบบ Auto Sell
+local autoSellConn = nil
+local sellCFrame = CFrame.new(74.0146408, 1.80152178, -51.6611252, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+
+local fb3 = createBox(farmPage, 0, 140, 185, 120, "Auto Sell")
+addToggle(fb3, "Auto Sell (Max Ninjitsu)", 28, function(enabled)
+    if enabled then
+        autoSellConn = task.spawn(function()
+            while task.wait(0.2) do
+                local pGui = localPlayer:FindFirstChild("PlayerGui")
+                if pGui and pGui:FindFirstChild("gameGui") then
+                    local menu = pGui.gameGui:FindFirstChild("maxNinjitsuMenu")
+                    if menu and menu.Visible then
+                        local btn = menu:FindFirstChild("sellButton")
+                        if btn and btn.Visible then
+                            local char = localPlayer.Character
+                            if char and char:FindFirstChild("HumanoidRootPart") then
+                                while menu.Visible and btn.Visible do
+                                    char.HumanoidRootPart.CFrame = sellCFrame
+                                    
+                                    if getconnections then
+                                        for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                                        for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
+                                        for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
+                                    end
+                                    
+                                    task.wait(0.1)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    else
+        if autoSellConn then
+            task.cancel(autoSellConn)
+            autoSellConn = nil
+        end
+    end
+end)
+
+print("MagicAlay Clean Floating UI Loaded Successfully!")
