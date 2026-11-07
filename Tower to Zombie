@@ -1,0 +1,604 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local VirtualUser = game:GetService("VirtualUser")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Feature States & Settings
+local autoKillZombiesState = false
+
+-- ดึง RemoteEvent สำหรับยิง
+local function getRemoteEvent()
+    local events = ReplicatedStorage:FindFirstChild("Events")
+    if events then
+        local actions = events:FindFirstChild("Actions")
+        if actions then
+            return actions:FindFirstChild("Fire")
+        end
+    end
+    return nil
+end
+
+-- ดึงชื่ออาวุธทั้งหมดในตัวและใน Backpack เพื่อเอามาใช้งานพร้อมกัน
+local function getAllWeapons()
+    local weapons = {}
+    local char = workspace:FindFirstChild(LocalPlayer.Name) or LocalPlayer.Character
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    
+    if char then
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Tool") or (item:IsA("Model") and item:FindFirstChild("Exit")) then
+                table.insert(weapons, item.Name)
+            end
+        end
+    end
+    
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then
+                table.insert(weapons, item.Name)
+            end
+        end
+    end
+    
+    if #weapons == 0 then
+        table.insert(weapons, "M1911")
+    end
+    return weapons
+end
+
+-- Cleanup Old GUI
+pcall(function()
+    local root = (gethui and gethui()) or CoreGui
+    local old = root:FindFirstChild("MagicAlay_IOS_Sidebar_GUI")
+    if old then old:Destroy() end
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MagicAlay_IOS_Sidebar_GUI"
+ScreenGui.ResetOnSpawn = false
+
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = playerGui
+end
+
+local BlurEffect = Lighting:FindFirstChild("UIBlurEffect") or Instance.new("BlurEffect")
+BlurEffect.Name = "UIBlurEffect"
+BlurEffect.Size = 0
+BlurEffect.Parent = Lighting
+
+local OriginalFOV = Camera.FieldOfView
+local isOpen = false
+
+local function UpdateBlurState()
+    if isOpen then
+        TweenService:Create(Camera, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {FieldOfView = OriginalFOV - 4}):Play()
+        TweenService:Create(BlurEffect, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = 22}):Play()
+    else
+        TweenService:Create(Camera, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {FieldOfView = OriginalFOV}):Play()
+        TweenService:Create(BlurEffect, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = 0}):Play()
+    end
+end
+
+-- ขนาด UI เล็กกะทัดรัด
+local HubWidth = 440
+local HubHeight = 290
+local TargetPosition = UDim2.new(0.5, -HubWidth/2, 0.5, -HubHeight/2)
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, HubWidth, 0, HubHeight)
+MainFrame.Position = TargetPosition
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+MainFrame.BackgroundTransparency = 0.15
+MainFrame.Active = true
+MainFrame.Visible = false
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 22)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(255, 255, 255)
+MainStroke.Thickness = 1.2
+MainStroke.Transparency = 0.7
+
+-- Banner Image Container
+local BannerFrame = Instance.new("Frame")
+BannerFrame.Name = "BannerContainer"
+BannerFrame.Size = UDim2.new(1, 0, 0, 80)
+BannerFrame.Position = UDim2.new(0, 0, 0, 0)
+BannerFrame.BackgroundTransparency = 1
+BannerFrame.ClipsDescendants = true
+BannerFrame.ZIndex = 1
+BannerFrame.Parent = MainFrame
+
+local BannerCorner = Instance.new("UICorner")
+BannerCorner.CornerRadius = UDim.new(0, 22)
+BannerCorner.Parent = BannerFrame
+
+local BannerImage = Instance.new("ImageLabel")
+BannerImage.Name = "HeaderBanner"
+BannerImage.Size = UDim2.new(1, 0, 1, 0)
+BannerImage.Position = UDim2.new(0, 0, 0, 0)
+BannerImage.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+BannerImage.Image = "rbxassetid://121648302029106"
+BannerImage.ScaleType = Enum.ScaleType.Crop
+BannerImage.ZIndex = 1
+BannerImage.Parent = BannerFrame
+
+local ImageCorner = Instance.new("UICorner")
+ImageCorner.CornerRadius = UDim.new(0, 22)
+ImageCorner.Parent = BannerImage
+
+local BannerGradient = Instance.new("Frame")
+BannerGradient.Size = UDim2.new(1, 0, 1, 0)
+BannerGradient.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+BannerGradient.BackgroundTransparency = 0.35
+BannerGradient.ZIndex = 2
+BannerGradient.Parent = BannerImage
+
+local GradientCorner = Instance.new("UICorner")
+GradientCorner.CornerRadius = UDim.new(0, 22)
+GradientCorner.Parent = BannerGradient
+
+-- Header Title & Draggable Area
+local SideTitle = Instance.new("TextButton")
+SideTitle.Name = "DragHeader"
+SideTitle.Size = UDim2.new(1, -20, 0, 60)
+SideTitle.Position = UDim2.new(0, 10, 0, 10)
+SideTitle.Text = ""
+SideTitle.BackgroundTransparency = 1
+SideTitle.AutoButtonColor = false
+SideTitle.ZIndex = 5
+SideTitle.Parent = MainFrame
+
+local SideTitleText = Instance.new("TextLabel")
+SideTitleText.Size = UDim2.new(0, 200, 0, 22)
+SideTitleText.Position = UDim2.new(0, 5, 0, 5)
+SideTitleText.Text = "MagicAlay Hub"
+SideTitleText.Font = Enum.Font.GothamBold
+SideTitleText.TextSize = 16
+SideTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+SideTitleText.TextXAlignment = Enum.TextXAlignment.Left
+SideTitleText.BackgroundTransparency = 1
+SideTitleText.ZIndex = 5
+SideTitleText.Parent = SideTitle
+
+local SideSub = Instance.new("TextLabel")
+SideSub.Size = UDim2.new(0, 300, 0, 16)
+SideSub.Position = UDim2.new(0, 5, 0, 27)
+SideSub.Text = "ActiveZombies - Auto Farm Hub"
+SideSub.Font = Enum.Font.GothamMedium
+SideSub.TextSize = 9.5
+SideSub.TextColor3 = Color3.fromRGB(210, 210, 230)
+SideSub.TextXAlignment = Enum.TextXAlignment.Left
+SideSub.BackgroundTransparency = 1
+SideSub.ZIndex = 5
+SideSub.Parent = SideTitle
+
+-- Subtitle Animation
+task.spawn(function()
+    local texts = {
+        "ActiveZombies - Auto Farm Hub",
+        "MagicAlay Official Script"
+    }
+    local index = 1
+    while true do
+        task.wait(3.5)
+        index = index % #texts + 1
+        SideSub.Text = texts[index]
+    end
+end)
+
+local frameDragging = false
+local frameDragInput, frameDragStart, frameStartPos
+
+SideTitle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        frameDragging = true
+        frameDragStart = input.Position
+        frameStartPos = MainFrame.Position
+        frameDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if frameDragging and (input == frameDragInput or input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - frameDragStart
+        MainFrame.Position = UDim2.new(
+            frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X,
+            frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input == frameDragInput or input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        frameDragging = false
+    end
+end)
+
+-- Sidebar Tab Bar
+local TabButtonContainer = Instance.new("ScrollingFrame")
+TabButtonContainer.Name = "TabButtonContainer"
+TabButtonContainer.Size = UDim2.new(0, 115, 1, -95)
+TabButtonContainer.Position = UDim2.new(0, 10, 0, 85)
+TabButtonContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TabButtonContainer.BackgroundTransparency = 0.5
+TabButtonContainer.ScrollBarThickness = 0
+TabButtonContainer.ZIndex = 4
+TabButtonContainer.Parent = MainFrame
+
+Instance.new("UICorner", TabButtonContainer).CornerRadius = UDim.new(0, 14)
+
+local TabListLayout = Instance.new("UIListLayout", TabButtonContainer)
+TabListLayout.Padding = UDim.new(0, 6)
+TabListLayout.FillDirection = Enum.FillDirection.Vertical
+TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+
+local PagesFolder = Instance.new("Folder")
+PagesFolder.Name = "PagesFolder"
+PagesFolder.Parent = MainFrame
+
+local Tabs = {}
+local FirstTab = true
+
+local function CreateTab(tabName, tabIconId)
+    local TabButton = Instance.new("TextButton")
+    TabButton.Size = UDim2.new(1, -10, 0, 38)
+    TabButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TabButton.BackgroundTransparency = 1
+    TabButton.Text = ""
+    TabButton.AutoButtonColor = false
+    TabButton.ZIndex = 5
+    TabButton.Parent = TabButtonContainer
+
+    Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 10)
+
+    local TabIcon = Instance.new("ImageLabel")
+    TabIcon.Size = UDim2.new(0, 16, 0, 16)
+    TabIcon.Position = UDim2.new(0, 10, 0.5, -8)
+    TabIcon.BackgroundTransparency = 1
+    TabIcon.Image = "rbxassetid://" .. tostring(tabIconId)
+    TabIcon.ImageColor3 = Color3.fromRGB(160, 160, 185)
+    TabIcon.ZIndex = 5
+    TabIcon.Parent = TabButton
+
+    local TabLabel = Instance.new("TextLabel")
+    TabLabel.Size = UDim2.new(1, -32, 1, 0)
+    TabLabel.Position = UDim2.new(0, 30, 0, 0)
+    TabLabel.Text = tabName
+    TabLabel.Font = Enum.Font.GothamMedium
+    TabLabel.TextSize = 11
+    TabLabel.TextColor3 = Color3.fromRGB(160, 160, 185)
+    TabLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TabLabel.BackgroundTransparency = 1
+    TabLabel.ZIndex = 5
+    TabLabel.Parent = TabButton
+
+    local ContentArea = Instance.new("ScrollingFrame")
+    ContentArea.Name = tabName .. "Page"
+    ContentArea.Size = UDim2.new(1, -140, 1, -95)
+    ContentArea.Position = UDim2.new(0, 133, 0, 85)
+    ContentArea.BackgroundTransparency = 1
+    ContentArea.ScrollBarThickness = 3
+    ContentArea.ScrollBarImageColor3 = Color3.fromRGB(52, 199, 123)
+    ContentArea.Visible = false
+    ContentArea.ZIndex = 4
+    ContentArea.Parent = PagesFolder
+
+    local ContentList = Instance.new("UIListLayout", ContentArea)
+    ContentList.Padding = UDim.new(0, 8)
+    ContentList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    local function SelectTab()
+        for _, tabData in pairs(Tabs) do
+            tabData.Page.Visible = false
+            TweenService:Create(tabData.Button, TweenInfo.new(0.25), {BackgroundTransparency = 1}):Play()
+            TweenService:Create(tabData.Icon, TweenInfo.new(0.25), {ImageColor3 = Color3.fromRGB(160, 160, 185)}):Play()
+            TweenService:Create(tabData.Label, TweenInfo.new(0.25), {TextColor3 = Color3.fromRGB(160, 160, 185)}):Play()
+        end
+        ContentArea.Visible = true
+        ContentArea.Position = UDim2.new(0, 140, 0, 85)
+        TweenService:Create(ContentArea, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 133, 0, 85)}):Play()
+        
+        TweenService:Create(TabButton, TweenInfo.new(0.25), {BackgroundTransparency = 0.82}):Play()
+        TweenService:Create(TabIcon, TweenInfo.new(0.25), {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+        TweenService:Create(TabLabel, TweenInfo.new(0.25), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+    end
+
+    TabButton.MouseButton1Click:Connect(SelectTab)
+    table.insert(Tabs, {Button = TabButton, Icon = TabIcon, Label = TabLabel, Page = ContentArea})
+
+    if FirstTab then
+        FirstTab = false
+        SelectTab()
+    end
+
+    return ContentArea
+end
+
+-- ==================== Home Tab ====================
+local HomeTab = CreateTab("Home", 130068439240504)
+
+local WelcomeCard = Instance.new("Frame")
+WelcomeCard.Size = UDim2.new(1, -10, 0, 110)
+WelcomeCard.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+WelcomeCard.BackgroundTransparency = 0.4
+WelcomeCard.ZIndex = 5
+WelcomeCard.Parent = HomeTab
+Instance.new("UICorner", WelcomeCard).CornerRadius = UDim.new(0, 12)
+
+local WelcomeStroke = Instance.new("UIStroke", WelcomeCard)
+WelcomeStroke.Color = Color3.fromRGB(52, 199, 123)
+WelcomeStroke.Thickness = 1.2
+WelcomeStroke.Transparency = 0.5
+
+local WelcomeTitle = Instance.new("TextLabel")
+WelcomeTitle.Size = UDim2.new(1, -20, 0, 20)
+WelcomeTitle.Position = UDim2.new(0, 12, 0, 8)
+WelcomeTitle.Text = "MagicAlay Hub"
+WelcomeTitle.Font = Enum.Font.GothamBold
+WelcomeTitle.TextSize = 12
+WelcomeTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+WelcomeTitle.TextXAlignment = Enum.TextXAlignment.Left
+WelcomeTitle.BackgroundTransparency = 1
+WelcomeTitle.ZIndex = 5
+WelcomeTitle.Parent = WelcomeCard
+
+local WelcomeDesc = Instance.new("TextLabel")
+WelcomeDesc.Size = UDim2.new(1, -20, 0, 75)
+WelcomeDesc.Position = UDim2.new(0, 12, 0, 28)
+WelcomeDesc.Text = "• Smart Boss/Tank Burst Spam (ActiveZombies)\n• Multi-Fire All Inventory Weapons\n• Optimized Clean UI"
+WelcomeDesc.Font = Enum.Font.GothamMedium
+WelcomeDesc.TextSize = 9.5
+WelcomeDesc.TextColor3 = Color3.fromRGB(180, 180, 205)
+WelcomeDesc.TextXAlignment = Enum.TextXAlignment.Left
+WelcomeDesc.BackgroundTransparency = 1
+WelcomeDesc.ZIndex = 5
+WelcomeDesc.Parent = WelcomeCard
+
+-- ==================== Auto Farm Tab ====================
+local FarmTab = CreateTab("Auto Farm", 12392897830)
+
+local function CreateIOSToggle(parent, titleText, defaultState, callback)
+    local Card = Instance.new("TextButton")
+    Card.Size = UDim2.new(1, -10, 0, 48)
+    Card.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    Card.BackgroundTransparency = 0.4
+    Card.Text = ""
+    Card.AutoButtonColor = false
+    Card.ZIndex = 5
+    Card.Parent = parent
+    Instance.new("UICorner", Card).CornerRadius = UDim.new(0, 12)
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -65, 1, 0)
+    Title.Position = UDim2.new(0, 14, 0, 0)
+    Title.Text = titleText
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 11
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.BackgroundTransparency = 1
+    Title.ZIndex = 5
+    Title.Parent = Card
+
+    local SwitchTrack = Instance.new("Frame")
+    SwitchTrack.Size = UDim2.new(0, 44, 0, 24)
+    SwitchTrack.Position = UDim2.new(1, -54, 0.5, -12)
+    SwitchTrack.BackgroundColor3 = defaultState and Color3.fromRGB(52, 199, 123) or Color3.fromRGB(60, 60, 75)
+    SwitchTrack.ZIndex = 5
+    SwitchTrack.Parent = Card
+    Instance.new("UICorner", SwitchTrack).CornerRadius = UDim.new(1, 0)
+
+    local SwitchKnob = Instance.new("Frame")
+    SwitchKnob.Size = UDim2.new(0, 20, 0, 20)
+    SwitchKnob.Position = defaultState and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
+    SwitchKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SwitchKnob.ZIndex = 6
+    SwitchKnob.Parent = SwitchTrack
+    Instance.new("UICorner", SwitchKnob).CornerRadius = UDim.new(1, 0)
+
+    local toggled = defaultState
+
+    Card.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        if toggled then
+            TweenService:Create(SwitchTrack, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(52, 199, 123)}):Play()
+            TweenService:Create(SwitchKnob, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -22, 0.5, -10)}):Play()
+        else
+            TweenService:Create(SwitchTrack, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(60, 60, 75)}):Play()
+            TweenService:Create(SwitchKnob, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 2, 0.5, -10)}):Play()
+        end
+        if callback then callback(toggled) end
+    end)
+end
+
+-- Anti-AFK
+LocalPlayer.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+end)
+
+-- Background Loop: Smart High-Health Burst Spam with ALL Inventory Weapons Multi-Fire
+task.spawn(function()
+    while task.wait(0.1) do
+        if autoKillZombiesState then
+            pcall(function()
+                local weapons = getAllWeapons()
+                local remote = getRemoteEvent()
+                local activeZombies = workspace:FindFirstChild("ActiveZombies")
+                local char = workspace:FindFirstChild(LocalPlayer.Name) or LocalPlayer.Character
+                
+                if activeZombies and remote then
+                    for _, zombie in ipairs(activeZombies:GetChildren()) do
+                        local hitbox = zombie:FindFirstChild("BodyHitbox") or zombie:FindFirstChild("HumanoidRootPart") or zombie:FindFirstChild("Head")
+                        local humanoid = zombie:FindFirstChildOfClass("Humanoid")
+                        
+                        if hitbox and humanoid and humanoid.Health > 0 then
+                            local maxHp = humanoid.MaxHealth or 100
+                            local currentHp = humanoid.Health
+                            
+                            -- กำหนดจำนวนครั้งในการสแปมยิงตามเลือดซอมบี้
+                            local spamCount = 1
+                            if currentHp > 250 or maxHp > 250 then
+                                spamCount = 4 -- เลือดเยอะสแปม 4 ชุด
+                            else
+                                spamCount = 2
+                            end
+                            
+                            -- ยิงด้วยอาวุธทุกชิ้นในตัวพร้อมกันแบบ Multi-Fire
+                            for _, weaponName in ipairs(weapons) do
+                                local exitPart = char and char:FindFirstChild(weaponName) and char[weaponName]:FindFirstChild("Exit")
+                                
+                                for i = 1, spamCount do
+                                    local targetPos = hitbox.Position
+                                    local originPos = exitPart and exitPart.Position or (char and char:FindFirstChild("Head") and char.Head.Position) or targetPos
+                                    
+                                    local args = {
+                                        [1] = weaponName,
+                                        [2] = {
+                                            [1] = {
+                                                [1] = hitbox,
+                                                [2] = targetPos,
+                                                [3] = Vector3.new(0, 1, 0)
+                                            }
+                                        },
+                                        [3] = {
+                                            [1] = {
+                                                [1] = weaponName,
+                                                [2] = originPos,
+                                                [3] = targetPos,
+                                                [4] = targetPos,
+                                                [5] = true,
+                                                [6] = hitbox,
+                                                [7] = false,
+                                                [8] = false,
+                                                [9] = "Default",
+                                                [10] = exitPart
+                                            }
+                                        },
+                                        n = 3
+                                    }
+                                    
+                                    pcall(function()
+                                        remote:FireServer(table.unpack(args, 1, 3))
+                                    end)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Controls in Farm Tab (เหลือแค่ Auto Kill Zombie ปุ่มเดียว)
+CreateIOSToggle(FarmTab, "Auto Kill Zombie", false, function(state) autoKillZombiesState = state end)
+
+-- Hub Open/Close Animation
+local function ToggleHub()
+    isOpen = not isOpen
+    UpdateBlurState()
+    if isOpen then
+        MainFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 0, 0, 0)
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        MainFrame.BackgroundTransparency = 1
+        
+        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, HubWidth, 0, HubHeight),
+            Position = TargetPosition,
+            BackgroundTransparency = 0.15
+        }):Play()
+    else
+        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            if not isOpen then MainFrame.Visible = false end
+        end)
+    end
+end
+
+-- Floating Button
+local FloatBtn = Instance.new("ImageButton")
+FloatBtn.Name = "iOSFloatButton"
+FloatBtn.Size = UDim2.new(0, 52, 0, 52)
+FloatBtn.Position = UDim2.new(0, 12, 0.5, -26)
+FloatBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+FloatBtn.BackgroundTransparency = 0.2
+FloatBtn.Image = "rbxassetid://134610671303702"
+FloatBtn.ScaleType = Enum.ScaleType.Crop
+FloatBtn.Active = true
+FloatBtn.Parent = ScreenGui
+
+Instance.new("UICorner", FloatBtn).CornerRadius = UDim.new(1, 0)
+local FloatStroke = Instance.new("UIStroke", FloatBtn)
+FloatStroke.Color = Color3.fromRGB(255, 255, 255)
+FloatStroke.Thickness = 1.5
+FloatStroke.Transparency = 0.5
+
+local floatDragging = false
+local floatDragInput, floatDragStart, floatStartPos
+local floatMoved = false
+
+FloatBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        floatDragging = true
+        floatMoved = false
+        floatDragStart = input.Position
+        floatStartPos = FloatBtn.Position
+        floatDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if floatDragging and (input == floatDragInput or input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - floatDragStart
+        if delta.Magnitude > 6 then 
+            floatMoved = true 
+            FloatBtn.Position = UDim2.new(
+                floatStartPos.X.Scale, floatStartPos.X.Offset + delta.X,
+                floatStartPos.Y.Scale, floatStartPos.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input == floatDragInput or input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        floatDragging = false
+    end
+end)
+
+FloatBtn.MouseButton1Click:Connect(function()
+    if not floatMoved then
+        TweenService:Create(FloatBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 46, 0, 46)}):Play()
+        task.delay(0.1, function()
+            TweenService:Create(FloatBtn, TweenInfo.new(0.1), {Size = UDim2.new(0, 52, 0, 52)}):Play()
+        end)
+        ToggleHub()
+    end
+end)
