@@ -60,7 +60,7 @@ local function SendiOSNotification(title, message, duration)
     Toast.Name = "iOSBanner"
     Toast.Parent = NotificationContainer
     Toast.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    Toast.BackgroundTransparency = 1 -- เริ่มจากล่องหน
+    Toast.BackgroundTransparency = 1
     Toast.Size = UDim2.new(1, 0, 0, 0)
     Toast.ClipsDescendants = true
 
@@ -71,6 +71,27 @@ local function SendiOSNotification(title, message, duration)
     UIStroke.Color = Color3.fromRGB(255, 255, 255)
     UIStroke.Thickness = 1
     UIStroke.Transparency = 1
+
+    -- Banner Background (rbxassetid://121648302029106)
+    local BannerBg = Instance.new("ImageLabel")
+    BannerBg.Name = "BannerBg"
+    BannerBg.Parent = Toast
+    BannerBg.BackgroundTransparency = 1
+    BannerBg.Size = UDim2.new(1, 0, 1, 0)
+    BannerBg.Image = "rbxassetid://121648302029106"
+    BannerBg.ScaleType = Enum.ScaleType.Crop
+    BannerBg.ImageTransparency = 0.35
+    BannerBg.ClipsDescendants = true
+    
+    local BannerCorner = Instance.new("UICorner", BannerBg)
+    BannerCorner.CornerRadius = UDim.new(0, 20)
+
+    local BannerGradient = Instance.new("UIGradient", BannerBg)
+    BannerGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 100, 120))
+    })
+    BannerGradient.Rotation = 90
 
     -- iOS Dynamic Island Grip Pill
     local TopPill = Instance.new("Frame")
@@ -98,7 +119,7 @@ local function SendiOSNotification(title, message, duration)
     AppIcon.BackgroundTransparency = 1
     AppIcon.Position = UDim2.new(0, 14, 0, 14)
     AppIcon.Size = UDim2.new(0, 18, 0, 18)
-    AppIcon.Image = "rbxassetid://6031075931"
+    AppIcon.Image = "rbxassetid://130068439240504"
     AppIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
     AppIcon.ImageTransparency = 1
 
@@ -237,7 +258,6 @@ local Config = {
     FastAttack = false, 
     AutoEquip = false, 
     HoldAllItems = false,
-    AttackAllBosses = false,
     ToolName = "", 
     AttackRange = 100,
     AutoFruit = false, AutoMelee = false, AutoDefense = false, AutoStrength = false,
@@ -786,11 +806,11 @@ local function CreateTab(tabName, tabIconId)
 end
 
 -- ==================== CREATE TABS & UI CONTENT ====================
-local tabMain = CreateTab("Main", "rbxassetid://6031075931")
-local tabBoss = CreateTab("Boss", "rbxassetid://6031075931")
-local tabCombat = CreateTab("Combat", "rbxassetid://6031075931")
-local tabStats = CreateTab("Stats", "rbxassetid://6031075931")
-local tabMisc = CreateTab("Misc", "rbxassetid://6031075931")
+local tabMain = CreateTab("Main", "rbxassetid://130068439240504")
+local tabBoss = CreateTab("Boss", "rbxassetid://9405930424")
+local tabCombat = CreateTab("Combat", "rbxassetid://12392897830")
+local tabStats = CreateTab("Stats", "rbxassetid://90815434947320")
+local tabMisc = CreateTab("Misc", "rbxassetid://9405931578")
 
 -- Main Tab
 tabMain.AddToggle("Auto Farm Slime", Config.SlimeGroupHunter, function(s) Config.SlimeGroupHunter = s end)
@@ -814,10 +834,6 @@ tabBoss.AddToggle("Hunt Cutie Boss", Config.CutieBossHunter, function(s) Config.
 tabCombat.AddToggle("Hold All Items", Config.HoldAllItems, function(s) 
     Config.HoldAllItems = s
     SendiOSNotification("Item Status", s and "Hold All Items Enabled" or "Hold All Items Disabled", 2.5)
-end)
-tabCombat.AddToggle("Attack All Bosses", Config.AttackAllBosses, function(s) 
-    Config.AttackAllBosses = s
-    SendiOSNotification("Combat Mode", s and "Targeting all active bosses" or "Targeting stopped", 2.5)
 end)
 tabCombat.AddToggle("Auto Equip Weapon", Config.AutoEquip, function(s) Config.AutoEquip = s end)
 local ToolList = {"Cursed Scythe", "Epic Sword", "Youru", "True Yorou", "Elucidator", "Dual Sword", "Real Knife", "True Knife", "Saber", "Bisento", "Amethyst Scythe", "Lighting Sword", "Limitless", "Black leg", "OFA [Deku]", "Combat"}
@@ -863,7 +879,7 @@ FloatBtn.Size = UDim2.new(0, 48, 0, 48)
 FloatBtn.Position = UDim2.new(0, 12, 0.5, -24)
 FloatBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 FloatBtn.BackgroundTransparency = 0.25
-FloatBtn.Image = "rbxassetid://6031075931"
+FloatBtn.Image = "rbxassetid://134610671303702"
 FloatBtn.ScaleType = Enum.ScaleType.Fit
 FloatBtn.Active = true
 FloatBtn.Parent = ScreenGui
@@ -983,26 +999,39 @@ task.spawn(function()
                 local cfgName = displayName:gsub(" ", "") .. "Hunter"
                 if Config[cfgName] then
                     local b, bh, hm = FindBoss(internalName)
-                    if b then PriorityTarget = {b, bh} break end
+                    if b and hm and hm.Health > 0 then 
+                        PriorityTarget = {b, bh} 
+                        break 
+                    end
                 end
             end
         end
     end
 end)
 
+-- Fast Attack Logic
 local function DoFastAttack()
     pcall(function()
         local Char = GetCharacter()
-        local CombatRemote = Char:FindFirstChild("Combat_Event", true) or Player.Backpack:FindFirstChild("Combat_Event", true)
-        local WeaponRemote = Char:FindFirstChild("Weapon_Event", true) or Player.Backpack:FindFirstChild("Weapon_Event", true)
         local HitboxModule = require(RS:WaitForChild("Module"):WaitForChild("Hitbox"))
-        if (CombatRemote or WeaponRemote) and Char:FindFirstChild("HumanoidRootPart") then
+        if Char and Char:FindFirstChild("HumanoidRootPart") then
             local Range = Config.AttackRange
             local Targets = HitboxModule:Overlap({MaxTarget = 100, Humanoid = Char.Humanoid, CF = Char.HumanoidRootPart.CFrame, Size = Vector3.new(Range, Range, Range)})
             if #Targets > 0 then
-                for i = 1, 10 do 
-                    if CombatRemote then CombatRemote:FireServer("Attack", Targets) end
-                    if WeaponRemote then WeaponRemote:FireServer("Slash", Targets) end
+                for _, item in ipairs(Char:GetChildren()) do
+                    if item:IsA("Tool") then
+                        item:Activate()
+                        local combatRemote = item:FindFirstChild("Combat_Event") or item:FindFirstChildOfClass("RemoteEvent")
+                        local weaponRemote = item:FindFirstChild("Weapon_Event")
+                        if combatRemote then combatRemote:FireServer("Attack", Targets) end
+                        if weaponRemote then weaponRemote:FireServer("Slash", Targets) end
+                    end
+                end
+                local defaultCombat = Char:FindFirstChild("Combat_Event", true) or Player.Backpack:FindFirstChild("Combat_Event", true)
+                local defaultWeapon = Char:FindFirstChild("Weapon_Event", true) or Player.Backpack:FindFirstChild("Weapon_Event", true)
+                for i = 1, 5 do 
+                    if defaultCombat then defaultCombat:FireServer("Attack", Targets) end
+                    if defaultWeapon then defaultWeapon:FireServer("Slash", Targets) end
                 end
             end
         end
@@ -1024,29 +1053,6 @@ local function HoldAllItems()
     end
 end
 
--- Logic: Attack all bosses simultaneously
-local function AttackAllBosses()
-    local char = Player.Character
-    if not char then return end
-    
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") and obj ~= char then
-            local hum = obj:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                for _, tool in ipairs(char:GetChildren()) do
-                    if tool:IsA("Tool") then
-                        tool:Activate()
-                        local remote = tool:FindFirstChildOfClass("RemoteEvent") or RS:FindFirstChild("AttackRemote")
-                        if remote then
-                            remote:FireServer(obj)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
 -- Main Farm Loop
 task.spawn(function()
     while true do
@@ -1054,10 +1060,6 @@ task.spawn(function()
         
         if Config.HoldAllItems then
             pcall(HoldAllItems)
-        end
-
-        if Config.AttackAllBosses then
-            pcall(AttackAllBosses)
         end
 
         if Config.BringChara then
@@ -1079,16 +1081,17 @@ task.spawn(function()
             local Hum = Char.Humanoid
             
             local currentBossHrp = nil
-            if PriorityTarget then
+            if PriorityTarget and PriorityTarget[1] and PriorityTarget[1].Parent then
                 local targetHrp = PriorityTarget[2]
                 local targetHum = PriorityTarget[1]:FindFirstChildOfClass("Humanoid")
-                if targetHum and targetHum.Health > 0 then currentBossHrp = targetHrp end
+                if targetHum and targetHum.Health > 0 then 
+                    currentBossHrp = targetHrp 
+                end
             end
 
             local targetObj, targetHrp, targetHum = nil, nil, nil
             if not currentBossHrp then
-                if Config.KyoHunter then targetObj, targetHrp, targetHum = FindBoss("kyo")
-                elseif Config.SlimeGroupHunter then
+                if Config.SlimeGroupHunter then
                     local b, bh, hm = FindBoss("slime")
                     if not b then b, bh, hm = FindBoss("king slime") end
                     targetObj, targetHrp, targetHum = b, bh, hm
@@ -1109,6 +1112,7 @@ task.spawn(function()
                 elseif Config.DuckHunter then targetObj, targetHrp, targetHum = FindBoss("duck boss")
                 elseif Config.SwordMasterHunter then targetObj, targetHrp, targetHum = FindBoss("sword master")
                 elseif Config.ShinoaHunter then targetObj, targetHrp, targetHum = FindBoss("shinoa")
+                elseif Config.KyoHunter then targetObj, targetHrp, targetHum = FindBoss("kyo")
                 end
             end
 
