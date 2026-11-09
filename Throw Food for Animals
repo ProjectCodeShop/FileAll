@@ -1,6 +1,10 @@
--- [[ Script Word [TH/EN] by ffsww_1007 ]] --
+--[[
+    MagicAlay Hub v3.0 - Free Edition
+    สไตล์: แถบหัว + ปุ่ม Settings/Credits + ช่องค้นหา + แท็บแนวนอน + การ์ดแบ่ง 2 คอลัมน์
+]]
+
 local protect_env = getgenv and getgenv() or _ENV or shared
-if protect_env.MagicAlayCleanup then pcall(protect_env.MagicAlayCleanup) end
+if protect_env.MagicAlayCleanup then pcall(protect_env.MagicAlayCleanup) end -- รันซ้ำ: ล้าง UI ตัวเก่า
 local ORIG_REQUEST = request or (syn and syn.request) or http_request or (fluxus and fluxus.request) or (Krnl and Krnl.request)
 
 -- ==================== SERVICES ====================
@@ -11,6 +15,7 @@ local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local MarketplaceService = game:GetService("MarketplaceService")
 local SoundService = game:GetService("SoundService")
 local HttpService = game:GetService("HttpService")
 
@@ -18,81 +23,33 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- ==================== LANGUAGE SYSTEM ====================
-local currentLang = "EN" -- ค่าเริ่มต้นภาษาอังกฤษ
+-- ==================== PRESET CFRAME POSITIONS ====================
+local THROW_SPOT = CFrame.new(-19.514164, 5.64999914, -34.9989357, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+local TRAIN_SPOT = CFrame.new(-62.1918259, 5.64999866, -9.69086075, 1, 0, 0, 0, 1, 0, 0, 0, 1)
 
-local LangData = {
-    EN = {
-        HubTitle = "MagicAlay Hub",
-        TabMain = "Main",
-        TabPlayer = "Player",
-        TabCredits = "Credits",
-        TabSettings = "Settings",
-        SearchPlaceholder = "Search features...",
-        SecWorkout = "Timed Hybrid Farm",
-        SecDummy = "Dummy & Teleport",
-        SecStats = "Character Stats",
-        SecExtras = "Extras",
-        TrainDur = "Train Duration (s)",
-        ThrowDur = "Throw Duration (s)",
-        SetTrain = "Set Training Spot",
-        SetThrow = "Set Throw Spot",
-        StartFarm = "Start Timed Hybrid Farm",
-        BringDummy = "Bring Dummies to Me",
-        Speed = "WalkSpeed",
-        Jump = "JumpPower",
-        InfJump = "Infinite Jump",
-        SettingsDisplay = "Display & Interface",
-        SettingsExp = "Experience & Audio",
-        SettingsPerf = "Performance & Tools",
-        Blur = "Background Blur",
-        Size = "Window Size",
-        Sound = "Sound Effects",
-        Notif = "Notifications",
-        AntiAFK = "Anti-AFK",
-        FpsBoost = "FPS Boost",
-        FpsCounter = "FPS Counter",
-        Keybind = "RightShift Hotkey",
-        LangToggle = "Language: EN"
-    },
-    TH = {
-        HubTitle = "เมนูหลัก MagicAlay",
-        TabMain = "หน้าหลัก",
-        TabPlayer = "ผู้เล่น",
-        TabCredits = "เครดิต",
-        TabSettings = "ตั้งค่า",
-        SearchPlaceholder = "ค้นหาฟังก์ชัน...",
-        SecWorkout = "ระบบสลับฟาร์มเวลา",
-        SecDummy = "ดึงหุ่นซ้อมและวาร์ป",
-        SecStats = "สถานะตัวละคร",
-        SecExtras = "ฟังก์ชันเสริม",
-        TrainDur = "เวลาเทรน (วินาที)",
-        ThrowDur = "เวลาขว้างรีโมท (วินาที)",
-        SetTrain = "บันทึกจุดเทรน (ตำแหน่งปัจจุบัน)",
-        SetThrow = "บันทึกจุดขว้าง (ตำแหน่งปัจจุบัน)",
-        StartFarm = "เริ่มระบบสลับฟาร์มเวลาอัตโนมัติ",
-        BringDummy = "ดึงหุ่นซ้อมมาไว้ใกล้ตัว",
-        Speed = "ความเร็วเดิน (WalkSpeed)",
-        Jump = "ความสูงกระโดด (JumpPower)",
-        InfJump = "กระโดดกลางอากาศ (Infinite Jump)",
-        SettingsDisplay = "การแสดงผลและหน้าจอ",
-        SettingsExp = "ประสบการณ์และเสียง",
-        SettingsPerf = "ประสิทธิภาพและเครื่องมือ",
-        Blur = "เบลอพื้นหลังฮับ",
-        Size = "ขนาดหน้าต่าง",
-        Sound = "เอฟเฟกต์เสียง",
-        Notif = "การแจ้งเตือน",
-        AntiAFK = "ระบบกันหลุด (Anti-AFK)",
-        FpsBoost = "เร่ง FPS (ลดกราฟิก)",
-        FpsCounter = "แสดงตัวเลข FPS",
-        Keybind = "ปุ่มลัดเปิด/ปิด (RightShift)",
-        LangToggle = "ภาษา: TH"
-    }
-}
+local function SafeTeleport(targetCFrame)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if root then
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        root.CFrame = targetCFrame
+    end
+end
 
 -- ==================== CONFIG ====================
+local KEY_FILE_NAME = "MagicAlay_SavedKey.txt"
+local FAV_FILE_NAME = "MagicAlay_Favorites.json"
 local CONFIG_FILE_NAME = "MagicAlay_UIConfig.json"
+local TRACKING_FILE_NAME = "MagicAlay_TrackingCache.json"
+local TARGET_KEY = "MagicAlay"
+local KEY_LINK = "https://discord.gg/rejKjgnvx"
+local SUPPORT_LINK = "https://discord.gg/rejKjgnvx"
+local DISCORD_CODE = "rejKjgnvx"
 local HUB_VERSION = "v3.0"
+local BANNER_ID = "121648302029106"
+local HOME_ICON_ID = "10723407389"
+local executionCount = 0
 local currentFps = 60
 
 local CREATORS = {
@@ -104,10 +61,14 @@ local CREATORS = {
 local RAW_ASSET_ID = "103143683174616"
 local TOGGLE_ICON_ID = "134610671303702"
 local BRAND_LOGO_ID = TOGGLE_ICON_ID
+local DISCORD_ICON_ID = "73132811772878"
 local RECOMMEND_ICON_ID = "9405930424"
-local HOME_ICON_ID = "10723407389"
+local FAVORITE_ICON_ID = "100050610003573"
 local SETTINGS_ICON_ID = "10734950309"
+local LOCK_ICON_ID = "137972454230468"
 local CREDIT_ICON_ID = "124353476045890"
+local RUN_ICON_ID = "6022668888"
+local CANCEL_ICON_ID = "6031094678"
 
 local SOUND_MENU = "rbxassetid://111174530730534"
 local SOUND_NOTIF = "rbxassetid://6436188054"
@@ -156,10 +117,26 @@ local function PressEffect(btn, amount)
     local function go(target, t, style, dir)
         TweenService:Create(sc, TweenInfo.new(t, style or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out), { Scale = target }):Play()
     end
-    btn.MouseEnter:Connect(function() hovering = true if not pressing then go(1.025, 0.18) end end)
-    btn.MouseLeave:Connect(function() hovering = false if not pressing then go(1, 0.22) end end)
-    btn.InputBegan:Connect(function(i) if IsPress(i) then pressing = true go(amount or 0.96, 0.1) end end)
-    btn.InputEnded:Connect(function(i) if IsPress(i) then pressing = false go(hovering and 1.025 or 1, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out) end end)
+    btn.MouseEnter:Connect(function()
+        hovering = true
+        if not pressing then go(1.025, 0.18) end
+    end)
+    btn.MouseLeave:Connect(function()
+        hovering = false
+        if not pressing then go(1, 0.22) end
+    end)
+    btn.InputBegan:Connect(function(i)
+        if IsPress(i) then
+            pressing = true
+            go(amount or 0.96, 0.1)
+        end
+    end)
+    btn.InputEnded:Connect(function(i)
+        if IsPress(i) then
+            pressing = false
+            go(hovering and 1.025 or 1, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        end
+    end)
 end
 
 local soundEnabled, notifEnabled = true, true
@@ -183,28 +160,27 @@ local function CopyToClipboard(text)
 end
 
 -- ==================== STORAGE ====================
-local customConfig = { CustomImageId = "", Scale = 1, Blur = true, Sound = true, Notif = true, AntiAFK = true, FpsBoost = false, FpsCounter = false, Keybind = true, Lang = "EN" }
+local customConfig = { CustomImageId = "", Scale = 1, Blur = true, Sound = true, Notif = true, Intro = true,
+    AntiAFK = true, FpsBoost = false, FpsCounter = false, Keybind = true }
 if readfile and isfile and isfile(CONFIG_FILE_NAME) then
     pcall(function()
         local decoded = HttpService:JSONDecode(readfile(CONFIG_FILE_NAME))
         if type(decoded) == "table" then for k, v in pairs(decoded) do customConfig[k] = v end end
     end)
 end
-currentLang = customConfig.Lang or "EN"
-
 local function SaveCustomConfig()
-    customConfig.Lang = currentLang
     if writefile then pcall(function() writefile(CONFIG_FILE_NAME, HttpService:JSONEncode(customConfig)) end) end
 end
 
 local blurEnabled = customConfig.Blur ~= false
 soundEnabled = customConfig.Sound ~= false
 notifEnabled = customConfig.Notif ~= false
+local isUnlocked = true
 local isOpen = false
-local FloatBtn
+local FloatBtn, SetOpen
 
 -- ==================== SCREEN GUI ====================
-local ScreenGui = New("ScreenGui", { Name = "MagicAlay_VIP_v2", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
+local ScreenGui = New("ScreenGui", { Name = "MagicAlay_Free_v2", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
 if gethui then
     ScreenGui.Parent = gethui()
 elseif syn and syn.protect_gui then
@@ -214,10 +190,15 @@ else
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
--- ==================== CLEANUP ====================
+-- ==================== CLEANUP / CONNECTION TRACKING ====================
 local Conns = {}
-local function Track(conn) table.insert(Conns, conn) return conn end
-local function OnInputChanged(fn) return Track(UserInputService.InputChanged:Connect(fn)) end
+local function Track(conn)
+    table.insert(Conns, conn)
+    return conn
+end
+local function OnInputChanged(fn)
+    return Track(UserInputService.InputChanged:Connect(fn))
+end
 protect_env.MagicAlayCleanup = function()
     for _, c in ipairs(Conns) do pcall(function() c:Disconnect() end) end
     pcall(function() ScreenGui:Destroy() end)
@@ -330,12 +311,12 @@ New("UIGradient", {
 
 -- ---------- Header ----------
 local HeaderBar = New("Frame", { Size = U(1, 0, 0, 46), BackgroundTransparency = 1 }, MainFrame)
-local HeaderTitleLabel = Label(HeaderBar, { Size = U(0, 200, 0, 18), Position = U(0, 16, 0, 6), Text = LangData[currentLang].HubTitle, Font = FB, TextSize = 15 })
+Label(HeaderBar, { Size = U(0, 260, 0, 18), Position = U(0, 16, 0, 6), Text = "MagicAlay Hub", Font = FB, TextSize = 15 })
 local SideSub = Label(HeaderBar, { Size = U(0, 270, 0, 14), Position = U(0, 16, 0, 25), Text = "", TextSize = 10, TextColor3 = SUB, RichText = true })
 task.spawn(function()
     local names, idx = { "Sky & Aek", "Aek & Sky" }, 1
     while ScreenGui.Parent do
-        SideSub.Text = 'By <font color="rgb(120,160,255)">' .. names[idx] .. '</font> · <font color="rgb(255,196,60)">' .. HUB_VERSION .. ' VIP</font>'
+        SideSub.Text = 'By <font color="rgb(120,160,255)">' .. names[idx] .. '</font> · <font color="rgb(90,230,120)">' .. HUB_VERSION .. ' Free</font>'
         idx = idx % #names + 1
         task.wait(3.5)
     end
@@ -349,15 +330,12 @@ local function HeaderPill(text, iconId, width, xOffset)
     Stroke(b, 0.05, 1.2, ACC)
     local ic = New("ImageLabel", { Size = U(0, 14, 0, 14), Position = U(0, 10, 0.5, -7), BackgroundTransparency = 1, ImageColor3 = WHITE }, b)
     ApplyImageAsset(ic, iconId)
-    local lbl = Label(b, { Size = U(1, -32, 1, 0), Position = U(0, 30, 0, 0), Text = text, Font = FB, TextSize = 11.5 })
+    Label(b, { Size = U(1, -32, 1, 0), Position = U(0, 30, 0, 0), Text = text, Font = FB, TextSize = 11.5 })
     PressEffect(b, 0.93)
-    return b, lbl
+    return b
 end
-
--- ปุ่มเปลี่ยนภาษาที่หัวข้อ
-local LangPill, LangPillText = HeaderPill("LANG: " .. currentLang, SETTINGS_ICON_ID, 90, -382)
-local SettingsPill, SettingsPillText = HeaderPill("Settings", SETTINGS_ICON_ID, 90, -288)
-local CreditsPill, CreditsPillText = HeaderPill("Credits", CREDIT_ICON_ID, 90, -194)
+local SettingsPill = HeaderPill("Settings", SETTINGS_ICON_ID, 100, -288)
+local CreditsPill = HeaderPill("Credits", CREDIT_ICON_ID, 96, -182)
 
 local function HeaderIconButton(text, xOffset, size)
     local b = New("TextButton", {
@@ -370,7 +348,7 @@ end
 local MinBtn = HeaderIconButton("–", -76, 22)
 local CloseBtn = HeaderIconButton("×", -42, 24)
 
--- ---------- Nav row ----------
+-- ---------- Nav row: search + tabs ----------
 local NAV_Y, NAV_H = 50, 30
 local CONTENT_Y = 90
 local SEARCH_W = 150
@@ -384,7 +362,7 @@ Stroke(SIcon, 0, 1.5, ACC2)
 local SHandle = New("Frame", { Size = U(0, 5, 0, 1.5), Position = U(0, 19, 0, 20), BackgroundColor3 = ACC2, Rotation = 45 }, SearchFrame)
 local SearchBox = New("TextBox", {
     Size = U(1, -36, 1, 0), Position = U(0, 28, 0, 0), BackgroundTransparency = 1, Text = "",
-    PlaceholderText = "Search features...", PlaceholderColor3 = DIM, TextColor3 = WHITE, Font = FM, TextSize = 11,
+    PlaceholderText = "Search...", PlaceholderColor3 = DIM, TextColor3 = WHITE, Font = FM, TextSize = 11,
     TextXAlignment = XL, ClearTextOnFocus = false
 }, SearchFrame)
 
@@ -415,22 +393,21 @@ end
 
 local function PanelHeader(parent, title, inset)
     inset = inset or 4
-    local lbl = Label(parent, { Size = U(1, 0, 0, 26), Position = U(0, 0, 0, 7), Text = title, Font = FB, TextSize = 13, TextXAlignment = XC })
+    Label(parent, { Size = U(1, 0, 0, 26), Position = U(0, 0, 0, 7), Text = title, Font = FB, TextSize = 13, TextXAlignment = XC })
     for _, x in ipairs({ U(0, inset, 0, 16), U(1, -(64 + inset), 0, 16) }) do
         local bar = New("Frame", { Size = U(0, 64, 0, 9), Position = x, BackgroundColor3 = WHITE }, parent)
         Corner(bar, 5)
         New("UIGradient", { Color = ColorSequence.new(RGB(28, 38, 190), RGB(96, 106, 255)) }, bar)
     end
-    return lbl
 end
 
 local function Section(parent, title, size, pos, grid)
     local sec = New("Frame", { Size = size, Position = pos, BackgroundColor3 = PANEL }, parent)
     Corner(sec, 12)
     Stroke(sec, 0.55, 1, LINE)
-    local pHead = PanelHeader(sec, title)
+    PanelHeader(sec, title)
     local scroll = NewScroll(sec, U(1, -16, 1, -42), U(0, 8, 0, 36), grid)
-    return sec, scroll, pHead
+    return sec, scroll
 end
 
 local function Row(parent, title, desc, opts)
@@ -486,6 +463,28 @@ local function MakeToggle(row, initial, onChange)
     return apply
 end
 
+local function UITextInput(parent, title, desc, default, callback)
+    local r = Row(parent, title, desc, { RightPad = 80 })
+    local inputWrap = New("Frame", { Size = U(0, 60, 0, 24), Position = U(1, -68, 0.5, -12), BackgroundColor3 = RGB(12, 13, 30) }, r)
+    Corner(inputWrap, 6)
+    local inStroke = Stroke(inputWrap, 0.6, 1, LINE)
+    local box = New("TextBox", {
+        Size = U(1, 0, 1, 0), BackgroundTransparency = 1, Text = tostring(default),
+        PlaceholderText = "Sec", TextColor3 = WHITE, Font = FB, TextSize = 11, TextXAlignment = XC, ClearTextOnFocus = false
+    }, inputWrap)
+    box.Focused:Connect(function() TweenService:Create(inStroke, TweenInfo.new(0.2), { Transparency = 0.1, Color = ACC }):Play() end)
+    box.FocusLost:Connect(function()
+        TweenService:Create(inStroke, TweenInfo.new(0.2), { Transparency = 0.6, Color = LINE }):Play()
+        local num = tonumber(box.Text)
+        if num then
+            task.spawn(function() pcall(callback, num) end)
+        else
+            box.Text = tostring(default)
+        end
+    end)
+    return r
+end
+
 local function BuildAvatar(parent, size, color, name, userId, pos)
     local holder = New("Frame", { Size = U(0, size, 0, size), Position = pos, BackgroundColor3 = color, BackgroundTransparency = 0.7 }, parent)
     Corner(holder, size / 2)
@@ -518,7 +517,13 @@ local function SubLabel(parent, text)
     end
     place()
     lbl:GetPropertyChangedSignal("TextBounds"):Connect(place)
-    return h, lbl
+    return h
+end
+
+local function Columns(page, leftTitle, rightTitle)
+    local _, left = Section(page, leftTitle, U(0.5, -6, 1, 0), U(0, 0, 0, 0))
+    local _, right = Section(page, rightTitle, U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+    return left, right
 end
 
 -- ==================== TAB SYSTEM ====================
@@ -542,13 +547,13 @@ local function LayoutTabs(animate)
     end
 end
 
-local function CreateTab(tabNameKey, iconId, hidden)
-    local tab = { NameKey = tabNameKey, Hidden = hidden, X = 0 }
+local function CreateTab(tabName, iconId, hidden)
+    local tab = { Name = tabName, Hidden = hidden, X = 0 }
     if not hidden then
         local btn = New("TextButton", { Size = U(0, TAB_W, 0, NAV_H), BackgroundTransparency = 1, Text = "", AutoButtonColor = false }, NavBar)
         local icon = New("ImageLabel", { Size = U(0, 16, 0, 16), Position = U(0, 6, 0.5, -8), BackgroundTransparency = 1, ImageColor3 = INACTIVE_TXT }, btn)
         ApplyImageAsset(icon, iconId or RAW_ASSET_ID)
-        local lbl = Label(btn, { Size = U(1, -26, 1, 0), Position = U(0, 26, 0, 0), Text = LangData[currentLang][tabNameKey] or tabNameKey, Font = FB, TextSize = 11.5, TextColor3 = INACTIVE_TXT })
+        local lbl = Label(btn, { Size = U(1, -26, 1, 0), Position = U(0, 26, 0, 0), Text = tabName, Font = FB, TextSize = 11.5, TextColor3 = INACTIVE_TXT })
         tab.Button, tab.Icon, tab.Label = btn, icon, lbl
         PressEffect(btn, 0.92)
     end
@@ -598,56 +603,18 @@ local function JoinDiscord()
             local r = ORIG_REQUEST({
                 Url = "http://127.0.0.1:6463/rpc?v=1", Method = "POST",
                 Headers = { ["Content-Type"] = "application/json", Origin = "https://discord.com" },
-                Body = HttpService:JSONEncode({ cmd = "INVITE_BROWSER", args = { code = "rejKjgnvx" }, nonce = HttpService:GenerateGUID(false) })
+                Body = HttpService:JSONEncode({ cmd = "INVITE_BROWSER", args = { code = DISCORD_CODE }, nonce = HttpService:GenerateGUID(false) })
             })
             if r and (r.StatusCode or 0) < 300 then opened = true end
         end)
     end
-    if not opened then CopyToClipboard("https://discord.gg/rejKjgnvx") end
-    ShowiOSNotification("Discord", opened and "Opening Discord..." or "Link copied to clipboard")
+    if not opened then CopyToClipboard(SUPPORT_LINK) end
+    ShowiOSNotification("Discord", opened and "Opening Discord..." or "Link copied, paste it in your browser")
 end
 
--- ==================== BUILD PAGES ====================
-local MainTab = CreateTab("TabMain", RECOMMEND_ICON_ID)
-local PlayerTab = CreateTab("TabPlayer", HOME_ICON_ID)
-local CreditTab = CreateTab("TabCredits", CREDIT_ICON_ID, true)
-local SettingsTab = CreateTab("TabSettings", SETTINGS_ICON_ID, true)
-
--- เก็บรายการข้อความทั้งหมดใน UI เพื่อให้สามารถอัปเดตภาษาได้ทันที
-local TextRegistry = {}
-local function RegisterText(instance, key, isPlaceholder)
-    table.insert(TextRegistry, { Inst = instance, Key = key, IsPlaceholder = isPlaceholder })
-    instance.Text = LangData[currentLang][key] or key
-end
-
-local function UpdateAllLanguageUI()
-    local l = LangData[currentLang]
-    HeaderTitleLabel.Text = l.HubTitle
-    LangPillText.Text = "LANG: " .. currentLang
-    SettingsPillText.Text = l.TabSettings
-    CreditsPillText.Text = l.TabCredits
-    SearchBox.PlaceholderText = l.SearchPlaceholder
-    
-    for _, item in ipairs(TextRegistry) do
-        if item.Inst and item.Inst.Parent then
-            if item.IsPlaceholder then
-                item.Inst.PlaceholderText = l[item.Key] or item.Key
-            else
-                item.Inst.Text = l[item.Key] or item.Key
-            end
-        end
-    end
-    for _, t in ipairs(Tabs) do
-        if t.Label and t.NameKey then
-            t.Label.Text = l[t.NameKey] or t.NameKey
-        end
-    end
-end
-
--- ==================== CREDITS PAGE ====================
+-- ==================== PAGE: CREDITS ====================
 local function SetupCreditsPage(page)
-    local _, left = Section(page, "MagicAlay Hub", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
-    local _, right = Section(page, "Creators & Team", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+    local left, right = Columns(page, "MagicAlay Hub", "Creators & Team")
 
     local Hero = New("Frame", { Size = U(1, 0, 0, 74), BackgroundColor3 = ROW }, left)
     Corner(Hero, 9)
@@ -661,9 +628,12 @@ local function SetupCreditsPage(page)
     Label(Hero, { Size = U(1, -80, 0, 14), Position = U(0, 74, 0, 40), Text = "Official Script Hub", TextSize = 10.5, TextColor3 = SUB })
 
     local Ver = Row(left, "Version", nil, {})
-    Label(Ver, { Size = U(0, 80, 1, 0), Position = U(1, -92, 0, 0), Text = HUB_VERSION .. " VIP", Font = FB, TextSize = 12, TextColor3 = RGB(255, 196, 60), TextXAlignment = XR })
+    Label(Ver, { Size = U(0, 80, 1, 0), Position = U(1, -92, 0, 0), Text = HUB_VERSION .. " Free", Font = FB, TextSize = 12, TextColor3 = RGB(90, 230, 120), TextXAlignment = XR })
     local Join = Row(left, "Join Discord", "Questions or bugs? Ask us.", { Click = true, Chevron = true })
-    Join.MouseButton1Click:Connect(function() PlaySound(SOUND_CLICK) JoinDiscord() end)
+    Join.MouseButton1Click:Connect(function()
+        PlaySound(SOUND_CLICK)
+        JoinDiscord()
+    end)
 
     for _, m in ipairs(CREATORS) do
         local r = New("Frame", { Size = U(1, 0, 0, 56), BackgroundColor3 = ROW }, right)
@@ -677,118 +647,369 @@ local function SetupCreditsPage(page)
         Label(Badge, { Size = U(1, 0, 1, 0), Text = string.upper(m.Role), Font = FB, TextSize = 9, TextXAlignment = XC })
     end
 end
-SetupCreditsPage(CreditTab.Body)
 
--- ==================== SETTINGS PAGE ====================
+-- ==================== TOOLS (ANTI-AFK / FPS BOOST / FPS COUNTER / KEYBIND) ====================
+local fpsOriginals
+local function ApplyFpsBoost(on)
+    pcall(function()
+        if on then
+            if not fpsOriginals then
+                fpsOriginals = { Shadows = Lighting.GlobalShadows, Quality = settings().Rendering.QualityLevel }
+            end
+            Lighting.GlobalShadows = false
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            for _, v in ipairs(Lighting:GetChildren()) do
+                if v:IsA("BloomEffect") or v:IsA("SunRaysEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("BlurEffect") and v.Name ~= "UIBlurEffect" then
+                    v.Enabled = false
+                end
+            end
+        elseif fpsOriginals then
+            Lighting.GlobalShadows = fpsOriginals.Shadows
+            settings().Rendering.QualityLevel = fpsOriginals.Quality
+            fpsOriginals = nil
+        end
+    end)
+end
+
+local FpsLabel = New("TextLabel", {
+    Size = U(0, 92, 0, 22), Position = U(1, -102, 0, 8), BackgroundColor3 = BG, BackgroundTransparency = 0.25,
+    Text = "FPS 60", Font = FB, TextSize = 11, TextColor3 = RGB(80, 230, 120), Visible = false, ZIndex = 200
+}, ScreenGui)
+Corner(FpsLabel, 7)
+task.spawn(function()
+    while ScreenGui.Parent do
+        if FpsLabel.Visible then
+            local fps = math.floor(currentFps + 0.5)
+            FpsLabel.Text = "FPS " .. fps
+            FpsLabel.TextColor3 = fps >= 50 and RGB(80, 230, 120) or (fps >= 30 and RGB(255, 196, 60) or RGB(255, 90, 80))
+        end
+        task.wait(0.5)
+    end
+end)
+
+Track(LocalPlayer.Idled:Connect(function()
+    if customConfig.AntiAFK == false then return end
+    pcall(function()
+        local vu = game:GetService("VirtualUser")
+        vu:CaptureController()
+        vu:ClickButton2(Vector2.new())
+    end)
+end))
+
+local function RejoinServer()
+    pcall(function()
+        local TS = game:GetService("TeleportService")
+        if #Players:GetPlayers() <= 1 then LocalPlayer:Kick("\nRejoining...") task.wait() TS:Teleport(game.PlaceId, LocalPlayer)
+        else TS:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end
+    end)
+end
+local function ServerHop()
+    task.spawn(function()
+        local ok, res = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+        end)
+        if ok and res and res.data then
+            for _, s in ipairs(res.data) do
+                if s.id ~= game.JobId and s.playing and s.maxPlayers and s.playing < s.maxPlayers then
+                    ShowiOSNotification("Server Hop", "Teleporting...")
+                    pcall(function() game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer) end)
+                    return
+                end
+            end
+        end
+        ShowiOSNotification("Server Hop", "No other server found", true)
+    end)
+end
+local function DebugInfo()
+    local exec = "unknown"
+    pcall(function() if identifyexecutor then exec = tostring((identifyexecutor())) end end)
+    return string.format("MagicAlay %s | Executor: %s | PlaceId: %s | JobId: %s | FPS: %d | User: %s",
+        HUB_VERSION, exec, tostring(game.PlaceId), tostring(game.JobId), math.floor(currentFps + 0.5), LocalPlayer.Name)
+end
+
+if customConfig.FpsBoost then ApplyFpsBoost(true) end
+FpsLabel.Visible = customConfig.FpsCounter == true
+
+-- ==================== PAGE: SETTINGS ====================
 local function SetupSettingsPage(page)
-    local _, left = Section(page, "SettingsDisplay", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
-    local _, right = Section(page, "SettingsPerf", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+    local left, right = Columns(page, "Interface", "Personalize")
 
-    local _, sub1 = SubLabel(left, "DISPLAY")
-    RegisterText(sub1, "SettingsDisplay")
-    
+    SubLabel(left, "DISPLAY")
     local BlurRow = Row(left, "Background Blur", "Blur the game while the hub is open")
-    MakeToggle(BlurRow, blurEnabled, function(state)
+    local setBlurToggle = MakeToggle(BlurRow, blurEnabled, function(state)
         blurEnabled = state
         customConfig.Blur = state
         SaveCustomConfig()
         UpdateBlurState()
     end)
 
-    local _, sub2 = SubLabel(left, "EXPERIENCE")
-    RegisterText(sub2, "SettingsExp")
-    
-    local SoundRow = Row(left, "Sound Effects", "Menu and click sounds")
-    MakeToggle(SoundRow, soundEnabled, function(state) soundEnabled = state customConfig.Sound = state SaveCustomConfig() end)
-    
-    local NotifRow = Row(left, "Notifications", "Pop-up banners at the top")
-    MakeToggle(NotifRow, notifEnabled, function(state) notifEnabled = state customConfig.Notif = state SaveCustomConfig() end)
+    local SizeRow = Row(left, "Window Size", "Small / Medium / Large", { RightPad = 120 })
+    local Seg = New("Frame", { Size = U(0, 96, 0, 26), Position = U(1, -108, 0.5, -13), BackgroundColor3 = RGB(12, 13, 30) }, SizeRow)
+    Corner(Seg, 7)
+    Stroke(Seg, 0.6, 1, LINE)
+    local options = { { "S", 0.85 }, { "M", 1 }, { "L", 1.15 } }
+    local segButtons = {}
+    local function RefreshSeg()
+        for i, b in ipairs(segButtons) do
+            local sel = math.abs((customConfig.Scale or 1) - options[i][2]) < 0.01
+            TweenService:Create(b, TweenInfo.new(0.2), { BackgroundTransparency = sel and 0 or 1 }):Play()
+        end
+    end
+    for i, opt in ipairs(options) do
+        local b = New("TextButton", {
+            Size = U(1 / 3, -4, 1, -4), Position = U((i - 1) / 3, 2, 0, 2), BackgroundColor3 = ACC, BackgroundTransparency = 1,
+            Text = opt[1], Font = FB, TextSize = 11.5, TextColor3 = WHITE, AutoButtonColor = false
+        }, Seg)
+        Corner(b, 6)
+        b.MouseButton1Click:Connect(function()
+            PlaySound(SOUND_CLICK)
+            customConfig.Scale = opt[2]
+            WindowScale.Scale = BaseScale()
+            SaveCustomConfig()
+            RefreshSeg()
+        end)
+        segButtons[i] = b
+    end
+    RefreshSeg()
 
-    local _, sub3 = SubLabel(right, "PERFORMANCE")
-    RegisterText(sub3, "SettingsPerf")
-    
-    local AfkRow = Row(left, "Anti-AFK", "Stay in game without idling out")
-    MakeToggle(AfkRow, customConfig.AntiAFK ~= false, function(state) customConfig.AntiAFK = state SaveCustomConfig() end)
-    
-    local KeyRow = Row(left, "RightShift Hotkey", "Press RightShift to open/close")
-    MakeToggle(KeyRow, customConfig.Keybind ~= false, function(state) customConfig.Keybind = state SaveCustomConfig() end)
+    SubLabel(left, "EXPERIENCE")
+    local SoundRow = Row(left, "Sound Effects", "Menu, click and notification sounds")
+    local setSoundToggle = MakeToggle(SoundRow, soundEnabled, function(state)
+        soundEnabled = state
+        customConfig.Sound = state
+        SaveCustomConfig()
+    end)
+    local NotifRow = Row(left, "Notifications", "Pop-up banners at the top of the screen")
+    local setNotifToggle = MakeToggle(NotifRow, notifEnabled, function(state)
+        notifEnabled = state
+        customConfig.Notif = state
+        SaveCustomConfig()
+    end)
+
+    SubLabel(left, "PERFORMANCE")
+    local AfkRow = Row(left, "Anti-AFK", "Stay in game, never kicked for idling")
+    local setAfk = MakeToggle(AfkRow, customConfig.AntiAFK ~= false, function(state)
+        customConfig.AntiAFK = state
+        SaveCustomConfig()
+    end)
+    local BoostRow = Row(left, "FPS Boost", "Lower graphics and disable heavy effects")
+    local setBoost = MakeToggle(BoostRow, customConfig.FpsBoost == true, function(state)
+        customConfig.FpsBoost = state
+        SaveCustomConfig()
+        ApplyFpsBoost(state)
+    end)
+    local CounterRow = Row(left, "FPS Counter", "Show a small FPS badge on screen")
+    local setCounter = MakeToggle(CounterRow, customConfig.FpsCounter == true, function(state)
+        customConfig.FpsCounter = state
+        SaveCustomConfig()
+        FpsLabel.Visible = state
+    end)
+    local KeyRow = Row(left, "RightShift Hotkey", "Press RightShift to open or close the hub")
+    local setKey = MakeToggle(KeyRow, customConfig.Keybind ~= false, function(state)
+        customConfig.Keybind = state
+        SaveCustomConfig()
+    end)
+
+    SubLabel(right, "THEME")
+    Row(right, "Custom Background", "Image asset ID (blank = off)", {})
+    local BgRow = New("Frame", { Size = U(1, 0, 0, 42), BackgroundColor3 = ROW }, right)
+    Corner(BgRow, 9)
+    local BgWrap = New("Frame", { Size = U(1, -100, 0, 28), Position = U(0, 8, 0.5, -14), BackgroundColor3 = RGB(12, 13, 30) }, BgRow)
+    Corner(BgWrap, 7)
+    local BgStroke = Stroke(BgWrap, 0.6, 1, LINE)
+    local BgBox = New("TextBox", {
+        Size = U(1, -14, 1, 0), Position = U(0, 7, 0, 0), BackgroundTransparency = 1, Text = tostring(customConfig.CustomImageId or ""),
+        PlaceholderText = "Asset ID", PlaceholderColor3 = DIM, TextColor3 = WHITE, Font = FM, TextSize = 11, TextXAlignment = XL, ClearTextOnFocus = false
+    }, BgWrap)
+    BgBox.Focused:Connect(function() TweenService:Create(BgStroke, TweenInfo.new(0.2), { Transparency = 0.1, Color = ACC }):Play() end)
+    BgBox.FocusLost:Connect(function() TweenService:Create(BgStroke, TweenInfo.new(0.2), { Transparency = 0.6, Color = LINE }):Play() end)
+    local Apply = New("TextButton", {
+        Size = U(0, 76, 0, 28), Position = U(1, -84, 0.5, -14), BackgroundColor3 = ACC, Text = "Apply", Font = FB, TextSize = 12,
+        TextColor3 = WHITE, AutoButtonColor = false
+    }, BgRow)
+    Corner(Apply, 7)
+    New("UIGradient", { Color = ColorSequence.new(RGB(80, 92, 255), RGB(48, 56, 220)), Rotation = 90 }, Apply)
+    PressEffect(Apply)
+    Apply.MouseButton1Click:Connect(function()
+        PlaySound(SOUND_CLICK)
+        local id = string.gsub(BgBox.Text, "%D", "")
+        customConfig.CustomImageId = id
+        SaveCustomConfig()
+        UpdateBackgroundImage(id)
+        ShowiOSNotification("Background", id == "" and "Background removed" or "Background applied")
+    end)
+
+    SubLabel(right, "TOOLS")
+    local ResetPos = Row(right, "Reset Button Position", "Bring the floating button back", { Click = true, Chevron = true })
+    ResetPos.MouseButton1Click:Connect(function()
+        PlaySound(SOUND_CLICK)
+        if FloatBtn then
+            TweenService:Create(FloatBtn, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = U(0, 16, 0.5, -26) }):Play()
+        end
+        ShowiOSNotification("Floating Button", "Position reset")
+    end)
 
     local Rejoin = Row(right, "Rejoin Server", "Reconnect to this same server", { Click = true, Chevron = true })
-    Rejoin.MouseButton1Click:Connect(function() PlaySound(SOUND_CLICK) pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end) end)
+    Rejoin.MouseButton1Click:Connect(function() PlaySound(SOUND_CLICK) RejoinServer() end)
+    local Hop = Row(right, "Server Hop", "Jump to a different public server", { Click = true, Chevron = true })
+    Hop.MouseButton1Click:Connect(function() PlaySound(SOUND_CLICK) ServerHop() end)
+    local Dbg = Row(right, "Copy Debug Info", "Send this to support when you find a bug", { Click = true, Chevron = true })
+    Dbg.MouseButton1Click:Connect(function()
+        PlaySound(SOUND_CLICK)
+        CopyToClipboard(DebugInfo())
+        ShowiOSNotification("Debug Info", "Copied to clipboard")
+    end)
+
+    SubLabel(right, "DANGER ZONE")
+    local ResetAll, raTitle, raDesc = Row(right, "Reset All Settings", "Restore everything to default", { Click = true, Chevron = true, Color = RGB(44, 20, 30) })
+    raTitle.TextColor3 = RGB(255, 130, 130)
+    Stroke(ResetAll, 0.7, 1, RGB(255, 90, 90))
+    local armed = false
+    ResetAll.MouseButton1Click:Connect(function()
+        PlaySound(SOUND_CLICK)
+        if not armed then
+            armed = true
+            raDesc.Text = "Tap again to confirm"
+            raDesc.TextColor3 = RGB(255, 170, 120)
+            task.delay(3, function()
+                if armed then
+                    armed = false
+                    raDesc.Text = "Restore everything to default"
+                    raDesc.TextColor3 = SUB
+                end
+            end)
+            return
+        end
+        armed = false
+        raDesc.Text = "Restore everything to default"
+        raDesc.TextColor3 = SUB
+        customConfig.CustomImageId, customConfig.Scale, customConfig.Blur = "", 1, true
+        customConfig.Sound, customConfig.Notif = true, true
+        blurEnabled, soundEnabled, notifEnabled = true, true, true
+        SaveCustomConfig()
+        WindowScale.Scale = BaseScale()
+        RefreshSeg()
+        UpdateBlurState()
+        UpdateBackgroundImage("")
+        BgBox.Text = ""
+        setBlurToggle(true)
+        setSoundToggle(true)
+        setNotifToggle(true)
+        customConfig.AntiAFK, customConfig.FpsBoost, customConfig.FpsCounter, customConfig.Keybind = true, false, false, true
+        SaveCustomConfig()
+        ApplyFpsBoost(false)
+        FpsLabel.Visible = false
+        setAfk(true) setBoost(false) setCounter(false) setKey(true)
+        ShowiOSNotification("Settings", "All settings restored to default", true)
+    end)
 end
+
+-- ==================== BUILD TABS ====================
+isUnlocked = true
+local MainTab = CreateTab("Main", RECOMMEND_ICON_ID)
+local PlayerTab = CreateTab("Player", HOME_ICON_ID)
+local CreditTab = CreateTab("Credits", CREDIT_ICON_ID, true)
+local SettingsTab = CreateTab("Settings", SETTINGS_ICON_ID, true)
+SetupCreditsPage(CreditTab.Body)
 SetupSettingsPage(SettingsTab.Body)
 
--- ==================== MAIN PAGE (Timed Hybrid Farm + Dummies) ====================
-local _, MainLeft = Section(MainTab.Body, "SecWorkout", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
-local _, MainRight = Section(MainTab.Body, "SecDummy", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+local SearchItems = {}
+local function Reg(frame, title) table.insert(SearchItems, { frame, string.lower(title) }) return frame end
 
-local _, subWorkout = SubLabel(MainLeft, "TIMED HYBRID FARM")
-RegisterText(subWorkout, "SecWorkout")
+local function UIButton(parent, title, desc, callback)
+    local r = Row(parent, title, desc, { Click = true, Chevron = true })
+    r.MouseButton1Click:Connect(function()
+        PlaySound(SOUND_CLICK)
+        task.spawn(function()
+            local ok, err = pcall(callback)
+            if not ok then warn("[MagicAlay] " .. tostring(err)) end
+        end)
+    end)
+    return Reg(r, title)
+end
 
-local hybridActive = false
-local trainDuration = 30
-local throwDuration = 10
-local trainingPosition = nil
-local throwTargetPosition = CFrame.new(0, 10, 0)
+local function UIToggle(parent, title, desc, default, callback)
+    local r = Row(parent, title, desc)
+    MakeToggle(r, default, function(state)
+        task.spawn(function()
+            local ok, err = pcall(callback, state)
+            if not ok then warn("[MagicAlay] " .. tostring(err)) end
+        end)
+    end)
+    return Reg(r, title)
+end
 
--- Slider สำหรับปรับเวลา Training
-local rTrain = Row(MainLeft, "Train Duration (s)", "", { Height = 54 })
-RegisterText(rTrain:FindFirstChildWhichIsA("TextLabel") or rTrain, "TrainDur")
-local vTrain = Label(rTrain, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = tostring(trainDuration), Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
-local barTrain = New("Frame", { Size = U(1, -24, 0, 6), Position = U(0, 12, 0, 38), BackgroundColor3 = RGB(12, 13, 30) }, rTrain)
-Corner(barTrain, 3)
-local fillTrain = New("Frame", { Size = U(0.1, 0, 1, 0), BackgroundColor3 = ACC }, barTrain)
-Corner(fillTrain, 3)
-local hitTrain = New("TextButton", { Size = U(1, 0, 0, 24), Position = U(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false }, barTrain)
-hitTrain.MouseButton1Click:Connect(function()
-    trainDuration = 55
-    vTrain.Text = tostring(trainDuration)
-end)
+-- ==================== PAGE: MAIN (ENGLISH LABELS) ====================
+local MainLeft, MainRight = Columns(MainTab.Body, "Farm Features", "Auto Features")
 
--- Slider สำหรับปรับเวลา Throw
-local rThrow = Row(MainLeft, "Throw Duration (s)", "", { Height = 54 })
-RegisterText(rThrow:FindFirstChildWhichIsA("TextLabel") or rThrow, "ThrowDur")
-local vThrow = Label(rThrow, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = tostring(throwDuration), Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
-local barThrow = New("Frame", { Size = U(1, -24, 0, 6), Position = U(0, 12, 0, 38), BackgroundColor3 = RGB(12, 13, 30) }, rThrow)
-Corner(barThrow, 3)
-local fillThrow = New("Frame", { Size = U(0.15, 0, 1, 0), BackgroundColor3 = ACC }, barThrow)
-Corner(fillThrow, 3)
+SubLabel(MainLeft, "AUTO FARM")
 
-local btnSetTrain = Row(MainLeft, "Set Training Spot", "Save current position for training", { Click = true, Chevron = true })
-RegisterText(btnSetTrain:FindFirstChildWhichIsA("TextLabel"), "SetTrain")
-btnSetTrain.MouseButton1Click:Connect(function()
-    PlaySound(SOUND_CLICK)
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        trainingPosition = char.HumanoidRootPart.CFrame
-        ShowiOSNotification("Hybrid Farm", "Training spot saved successfully!")
+local autoTrainOnly = false
+UIToggle(MainLeft, "Auto Training Only", "Teleport to training spot", false, function(on)
+    autoTrainOnly = on
+    if on then
+        SafeTeleport(TRAIN_SPOT)
+        ShowiOSNotification("Auto Train", "Teleported to training spot!")
     end
-end)
-
-local btnSetThrow = Row(MainLeft, "Set Throw Spot", "Save remote throw location", { Click = true, Chevron = true })
-RegisterText(btnSetThrow:FindFirstChildWhichIsA("TextLabel"), "SetThrow")
-btnSetThrow.MouseButton1Click:Connect(function()
-    PlaySound(SOUND_CLICK)
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        throwTargetPosition = char.HumanoidRootPart.CFrame
-        ShowiOSNotification("Hybrid Farm", "Throw spot saved successfully!")
-    end
-end)
-
-local toggleFarm = Row(MainLeft, "Start Timed Hybrid Farm", "Auto switch between training and remote throwing")
-RegisterText(toggleFarm:FindFirstChildWhichIsA("TextLabel"), "StartFarm")
-MakeToggle(toggleFarm, false, function(on)
-    hybridActive = on
     task.spawn(function()
-        while hybridActive do
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            if root and not trainingPosition then trainingPosition = root.CFrame end
+        while autoTrainOnly do
+            pcall(function()
+                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                if remotes and remotes:FindFirstChild("Training_Start") then
+                    remotes.Training_Start:InvokeServer(table.unpack({n = 0}, 1, 0))
+                end
+            end)
+            task.wait(0.2)
+        end
+    end)
+end)
 
-            -- 1. Training Phase
-            local startTime = tick()
-            while hybridActive and (tick() - startTime < trainDuration) do
+local autoThrowOnly = false
+UIToggle(MainLeft, "Auto Throw Only", "Teleport to throw spot", false, function(on)
+    autoThrowOnly = on
+    if on then
+        SafeTeleport(THROW_SPOT)
+        ShowiOSNotification("Auto Throw", "Teleported to throw spot!")
+    end
+    task.spawn(function()
+        while autoThrowOnly do
+            pcall(function()
+                local remotes = ReplicatedStorage:WaitForChild("Remotes")
+                local throwStart = remotes:WaitForChild("Throw_Start")
+                local throwResolve = remotes:WaitForChild("Throw_Resolve")
+                throwStart:InvokeServer(table.unpack({n = 0}, 1, 0))
+                task.wait(0.12)
+                throwResolve:InvokeServer(table.unpack({ [1] = 0.21420293186691322, n = 1 }, 1, 1))
+            end)
+            task.wait(0.3)
+        end
+    end)
+end)
+
+SubLabel(MainLeft, "TIMED LOOP")
+
+local hybridFarmActive = false
+local autoResetMode = false
+local customTrainTime = 30
+local customThrowTime = 10
+
+UITextInput(MainLeft, "Train Time (s)", "Training duration (seconds)", customTrainTime, function(val)
+    customTrainTime = math.max(1, val)
+end)
+
+UITextInput(MainLeft, "Throw Time (s)", "Throwing duration (seconds)", customThrowTime, function(val)
+    customThrowTime = math.max(1, val)
+end)
+
+UIToggle(MainLeft, "Auto Reset After Throw", "Reset character after throwing", false, function(on) autoResetMode = on end)
+
+UIToggle(MainLeft, "Timed Dual Farm", "Loop between train and throw", false, function(on)
+    hybridFarmActive = on
+    task.spawn(function()
+        while hybridFarmActive do
+            SafeTeleport(TRAIN_SPOT)
+            local trainStart = tick()
+            while hybridFarmActive and (tick() - trainStart < customTrainTime) do
                 pcall(function()
                     local remotes = ReplicatedStorage:FindFirstChild("Remotes")
                     if remotes and remotes:FindFirstChild("Training_Start") then
@@ -798,113 +1019,106 @@ MakeToggle(toggleFarm, false, function(on)
                 task.wait(0.2)
             end
 
-            if not hybridActive then break end
+            if not hybridFarmActive then break end
 
-            -- 2. Teleport to Throw Remote Spot
-            if root and trainingPosition then root.CFrame = throwTargetPosition end
-
-            local throwStartTime = tick()
-            while hybridActive and (tick() - throwStartTime < throwDuration) do
+            SafeTeleport(THROW_SPOT)
+            local throwStart = tick()
+            while hybridFarmActive and (tick() - throwStart < customThrowTime) do
                 pcall(function()
                     local remotes = ReplicatedStorage:WaitForChild("Remotes")
-                    local throwStart = remotes:WaitForChild("Throw_Start")
-                    local throwResolve = remotes:WaitForChild("Throw_Resolve")
-                    local analyticsFps = ReplicatedStorage:FindFirstChild("UserGenerated") 
-                        and ReplicatedStorage.UserGenerated:FindFirstChild("Analytics") 
-                        and ReplicatedStorage.UserGenerated.Analytics.ClientKit 
-                        and ReplicatedStorage.UserGenerated.Analytics.ClientKit:FindFirstChild("Fps")
-
-                    if analyticsFps then
-                        analyticsFps:FireServer(table.unpack({ [1] = 6, [2] = 43.0550357000591, [3] = 4, n = 3 }, 1, 3))
-                    end
-
-                    throwStart:InvokeServer(table.unpack({n = 0}, 1, 0))
+                    remotes.Throw_Start:InvokeServer(table.unpack({n = 0}, 1, 0))
                     task.wait(0.12)
-                    throwResolve:InvokeServer(table.unpack({ [1] = 0.21420293186691322, n = 1 }, 1, 1))
+                    remotes.Throw_Resolve:InvokeServer(table.unpack({ [1] = 0.21420293186691322, n = 1 }, 1, 1))
                 end)
                 task.wait(0.3)
             end
 
-            if not hybridActive then break end
+            if not hybridFarmActive then break end
 
-            -- 3. Teleport back to Training Spot
-            if root and trainingPosition then root.CFrame = trainingPosition end
-        end
-    end)
-end)
-
-local _, subDummy = SubLabel(MainRight, "DUMMY TELEPORT")
-RegisterText(subDummy, "SecDummy")
-
-local btnBring = Row(MainRight, "Bring Dummies to Me", "Teleport training dummies to your location", { Click = true, Chevron = true })
-RegisterText(btnBring:FindFirstChildWhichIsA("TextLabel"), "BringDummy")
-btnBring.MouseButton1Click:Connect(function()
-    PlaySound(SOUND_CLICK)
-    pcall(function()
-        local char = LocalPlayer.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-        local myPos = char.HumanoidRootPart.Position + (char.HumanoidRootPart.CFrame.LookVector * 4)
-        
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("Model") and (obj:FindFirstChild("Humanoid") or obj:FindFirstChild("HumanoidRootPart")) and obj ~= char then
-                local rootPart = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
-                if rootPart then rootPart.CFrame = CFrame.new(myPos) end
+            if autoResetMode then
+                local currentHum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if currentHum then currentHum.Health = 0 end
+                LocalPlayer.CharacterAdded:Wait()
+                task.wait(1.2)
             end
         end
-        ShowiOSNotification("Dummy Teleport", "Training dummies brought to you!")
     end)
 end)
 
--- ==================== PLAYER PAGE ====================
-local _, PlayerLeft = Section(PlayerTab.Body, "SecStats", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
-local _, PlayerRight = Section(PlayerTab.Body, "SecExtras", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+SubLabel(MainRight, "AUTO 40s")
 
-local function Hum() return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") end
-
-local rSpeed = Row(PlayerLeft, "WalkSpeed", "", { Height = 54 })
-RegisterText(rSpeed:FindFirstChildWhichIsA("TextLabel"), "Speed")
-local vSpeed = Label(rSpeed, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = "16", Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
-local barSpeed = New("Frame", { Size = U(1, -24, 0, 6), Position = U(0, 12, 0, 38), BackgroundColor3 = RGB(12, 13, 30) }, rSpeed)
-Corner(barSpeed, 3)
-local fillSpeed = New("Frame", { Size = U(0, 0, 1, 0), BackgroundColor3 = ACC }, barSpeed)
-Corner(fillSpeed, 3)
-local hitSpeed = New("TextButton", { Size = U(1, 0, 0, 24), Position = U(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false }, barSpeed)
-hitSpeed.MouseButton1Click:Connect(function()
-    local h = Hum()
-    if h then h.WalkSpeed = 50 vSpeed.Text = "50" fillSpeed.Size = U(0.2, 0, 1, 0) end
+local autoEquipBestActive = false
+UIToggle(MainRight, "Auto Equip Best Pet", "Equip best pet (every 40s)", false, function(on)
+    autoEquipBestActive = on
+    task.spawn(function()
+        while autoEquipBestActive do
+            pcall(function()
+                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                if remotes and remotes:FindFirstChild("Plot_EquipBest") then
+                    remotes.Plot_EquipBest:InvokeServer(table.unpack({n = 0}, 1, 0))
+                end
+            end)
+            task.wait(40)
+        end
+    end)
 end)
 
-local rJump = Row(PlayerLeft, "JumpPower", "", { Height = 54 })
-RegisterText(rJump:FindFirstChildWhichIsA("TextLabel"), "Jump")
-local vJump = Label(rJump, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = "50", Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
+local autoStandUpgradeActive = false
+UIToggle(MainRight, "Auto Stand Upgrade", "Upgrade stand (every 40s)", false, function(on)
+    autoStandUpgradeActive = on
+    task.spawn(function()
+        while autoStandUpgradeActive do
+            pcall(function()
+                local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                if remotes and remotes:FindFirstChild("Stand_Upgrade") then
+                    remotes.Stand_Upgrade:InvokeServer(table.unpack({n = 0}, 1, 0))
+                end
+            end)
+            task.wait(40)
+        end
+    end)
+end)
 
-local infJump = false
+-- ==================== PAGE: PLAYER ====================
+local PlayerLeft, PlayerRight = Columns(PlayerTab.Body, "Movement Options", "Abilities & Extras")
+
+SubLabel(PlayerLeft, "CHARACTER STATS")
+local function Hum() return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") end
+
+UIButton(PlayerLeft, "Boost WalkSpeed (50)", "Set WalkSpeed to 50 instantly", function()
+    local h = Hum()
+    if h then h.WalkSpeed = 50 ShowiOSNotification("Speed", "WalkSpeed set to 50") end
+end)
+
+UIButton(PlayerLeft, "Boost JumpPower (120)", "Set JumpPower to 120 instantly", function()
+    local h = Hum()
+    if h then h.UseJumpPower = true h.JumpPower = 120 ShowiOSNotification("Jump", "JumpPower set to 120") end
+end)
+
+SubLabel(PlayerRight, "SPECIAL ABILITIES")
+local infJumpActive = false
 Track(UserInputService.JumpRequest:Connect(function()
-    if infJump then local h = Hum() if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end
+    if infJumpActive then
+        local h = Hum()
+        if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
 end))
-local toggleInf = Row(PlayerRight, "Infinite Jump", "Jump infinitely in the air")
-RegisterText(toggleInf:FindFirstChildWhichIsA("TextLabel"), "InfJump")
-MakeToggle(toggleInf, false, function(on) infJump = on end)
 
--- ==================== EVENT BINDINGS ====================
-LangPill.MouseButton1Click:Connect(function()
-    PlaySound(SOUND_CLICK)
-    currentLang = (currentLang == "EN") and "TH" or "EN"
-    SaveCustomConfig()
-    UpdateAllLanguageUI()
-    ShowiOSNotification("Language", "Switched to " .. currentLang)
+UIToggle(PlayerRight, "Infinite Jump", "Jump continuously in mid-air", false, function(on)
+    infJumpActive = on
+end)
+
+-- Search Box กรองปุ่มทั้งหมด
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local q = string.lower(SearchBox.Text)
+    for _, it in ipairs(SearchItems) do it[1].Visible = (q == "") or string.find(it[2], q, 1, true) ~= nil end
 end)
 
 SettingsPill.MouseButton1Click:Connect(function() SettingsTab.Select() end)
 CreditsPill.MouseButton1Click:Connect(function() CreditTab.Select() end)
 
-SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-    local q = string.lower(SearchBox.Text)
-    -- สามารถเพิ่มระบบกรองค้นหาได้ที่นี่
-end)
-
 -- ==================== OPEN / CLOSE ====================
-local function SetOpen(state)
+SetOpen = function(state)
     if isOpen == state then return end
     isOpen = state
     PlaySound(SOUND_MENU)
@@ -918,7 +1132,9 @@ local function SetOpen(state)
     else
         local tw = TweenService:Create(WindowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), { Scale = base * 0.85 })
         tw:Play()
-        tw.Completed:Connect(function() if not isOpen then MainFrame.Visible = false end end)
+        tw.Completed:Connect(function()
+            if not isOpen then MainFrame.Visible = false end
+        end)
     end
 end
 MinBtn.MouseButton1Click:Connect(function() SetOpen(false) end)
@@ -926,16 +1142,27 @@ Track(UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe or customConfig.Keybind == false then return end
     if input.KeyCode == Enum.KeyCode.RightShift then SetOpen(not isOpen) end
 end))
-CloseBtn.MouseButton1Click:Connect(function()
-    SetOpen(false)
-    task.delay(0.4, function() if protect_env.MagicAlayCleanup then protect_env.MagicAlayCleanup() end end)
-end)
 
--- Window Dragging
+local function DestroyHub()
+    SetOpen(false)
+    task.delay(0.4, function()
+        if protect_env.MagicAlayCleanup then protect_env.MagicAlayCleanup() end
+    end)
+end
+CloseBtn.MouseButton1Click:Connect(DestroyHub)
+
+-- ลากหน้าต่างที่แถบหัว
 do
     local dragging, dragStart, startPos
     HeaderBar.InputBegan:Connect(function(input)
-        if IsPress(input) then dragging = true dragStart = input.Position startPos = MainFrame.Position end
+        if IsPress(input) then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
     end)
     OnInputChanged(function(input)
         if dragging and IsMove(input) then
@@ -945,7 +1172,7 @@ do
     end)
 end
 
--- Floating Button
+-- ==================== FLOATING TOGGLE BUTTON ====================
 FloatBtn = New("ImageButton", {
     Name = "FloatingToggle", Size = U(0, 52, 0, 52), Position = U(0, 16, 0.5, -26), BackgroundColor3 = BG,
     ScaleType = Enum.ScaleType.Crop, Visible = false, ZIndex = 150
@@ -954,7 +1181,9 @@ Corner(FloatBtn, 26)
 ApplyImageAsset(FloatBtn, TOGGLE_ICON_ID)
 local FloatStroke = Stroke(FloatBtn, 0.1, 2)
 local FloatGrad = New("UIGradient", {
-    Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, RGB(64, 74, 255)), ColorSequenceKeypoint.new(0.5, RGB(191, 90, 242)), ColorSequenceKeypoint.new(1, RGB(64, 74, 255)) })
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, RGB(64, 74, 255)), ColorSequenceKeypoint.new(0.5, RGB(191, 90, 242)), ColorSequenceKeypoint.new(1, RGB(64, 74, 255))
+    })
 }, FloatStroke)
 local FloatScale = New("UIScale", {}, FloatBtn)
 
@@ -962,7 +1191,9 @@ do
     local dragging, moved, dragStart, startPos = false, false, nil, nil
     FloatBtn.InputBegan:Connect(function(input)
         if IsPress(input) then
-            dragging, moved = true, false dragStart = input.Position startPos = FloatBtn.Position
+            dragging, moved = true, false
+            dragStart = input.Position
+            startPos = FloatBtn.Position
             TweenService:Create(FloatScale, TweenInfo.new(0.12), { Scale = 0.9 }):Play()
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
@@ -992,7 +1223,6 @@ end))
 FloatBtn.Visible = true
 FloatBtn.Position = U(0, -60, 0.5, -26)
 TweenService:Create(FloatBtn, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = U(0, 16, 0.5, -26) }):Play()
-UpdateAllLanguageUI()
 LayoutTabs(false)
 MainTab.Select()
 SetOpen(true)
