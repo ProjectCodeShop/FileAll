@@ -23,9 +23,22 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- ==================== PRESET CFRAME POSITIONS ====================
+-- ==================== PART TELEPORT FUNCTION ====================
 local THROW_SPOT = CFrame.new(-19.514164, 5.64999914, -34.9989357, 1, 0, 0, 0, 1, 0, 0, 0, 1)
-local TRAIN_SPOT = CFrame.new(-62.1918259, 5.64999866, -9.69086075, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+
+local function SafeTeleportToPart(partName)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local targetPart = Workspace:FindFirstChild(partName, true)
+    if targetPart and targetPart:IsA("BasePart") then
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        -- ปรับระยะให้ยืนห่างออกมาจากพาร์ทพอสมควร (ไม่ทับตัวพาร์ทและไม่อยู่ใกล้เกินไป)
+        root.CFrame = targetPart.CFrame + (targetPart.CFrame.LookVector * -8) + Vector3.new(0, 3, 0)
+    end
+end
 
 local function SafeTeleport(targetCFrame)
     local char = LocalPlayer.Character
@@ -348,27 +361,13 @@ end
 local MinBtn = HeaderIconButton("–", -76, 22)
 local CloseBtn = HeaderIconButton("×", -42, 24)
 
--- ---------- Nav row: search + tabs ----------
+-- ---------- Nav row: tabs only (Search removed) ----------
 local NAV_Y, NAV_H = 50, 30
 local CONTENT_Y = 90
-local SEARCH_W = 150
-
-local SearchFrame = New("Frame", { Size = U(0, SEARCH_W, 0, 28), Position = U(0, 14, 0, NAV_Y + 1), BackgroundColor3 = ROW }, MainFrame)
-Corner(SearchFrame, 8)
-Stroke(SearchFrame, 0.6, 1, LINE)
-local SIcon = New("Frame", { Size = U(0, 10, 0, 10), Position = U(0, 10, 0, 8), BackgroundTransparency = 1 }, SearchFrame)
-Corner(SIcon, 5)
-Stroke(SIcon, 0, 1.5, ACC2)
-local SHandle = New("Frame", { Size = U(0, 5, 0, 1.5), Position = U(0, 19, 0, 20), BackgroundColor3 = ACC2, Rotation = 45 }, SearchFrame)
-local SearchBox = New("TextBox", {
-    Size = U(1, -36, 1, 0), Position = U(0, 28, 0, 0), BackgroundTransparency = 1, Text = "",
-    PlaceholderText = "Search...", PlaceholderColor3 = DIM, TextColor3 = WHITE, Font = FM, TextSize = 11,
-    TextXAlignment = XL, ClearTextOnFocus = false
-}, SearchFrame)
 
 local TAB_W = 92
 local NavBar = New("Frame", {
-    Size = U(1, -(SEARCH_W + 40), 0, NAV_H), Position = U(0, SEARCH_W + 28, 0, NAV_Y), BackgroundTransparency = 1, ClipsDescendants = true
+    Size = U(1, -40, 0, NAV_H), Position = U(0, 20, 0, NAV_Y), BackgroundTransparency = 1, ClipsDescendants = true
 }, MainFrame)
 local Underline = New("Frame", { Size = U(0, 36, 0, 3), Position = U(0, 0, 1, -3), BackgroundColor3 = ACC, Visible = false }, NavBar)
 Corner(Underline, 2)
@@ -913,9 +912,6 @@ local SettingsTab = CreateTab("Settings", SETTINGS_ICON_ID, true)
 SetupCreditsPage(CreditTab.Body)
 SetupSettingsPage(SettingsTab.Body)
 
-local SearchItems = {}
-local function Reg(frame, title) table.insert(SearchItems, { frame, string.lower(title) }) return frame end
-
 local function UIButton(parent, title, desc, callback)
     local r = Row(parent, title, desc, { Click = true, Chevron = true })
     r.MouseButton1Click:Connect(function()
@@ -925,7 +921,7 @@ local function UIButton(parent, title, desc, callback)
             if not ok then warn("[MagicAlay] " .. tostring(err)) end
         end)
     end)
-    return Reg(r, title)
+    return r
 end
 
 local function UIToggle(parent, title, desc, default, callback)
@@ -936,7 +932,7 @@ local function UIToggle(parent, title, desc, default, callback)
             if not ok then warn("[MagicAlay] " .. tostring(err)) end
         end)
     end)
-    return Reg(r, title)
+    return r
 end
 
 -- ==================== PAGE: MAIN (ENGLISH LABELS) ====================
@@ -945,11 +941,11 @@ local MainLeft, MainRight = Columns(MainTab.Body, "Farm Features", "Auto Feature
 SubLabel(MainLeft, "AUTO FARM")
 
 local autoTrainOnly = false
-UIToggle(MainLeft, "Auto Training Only", "Teleport to training spot", false, function(on)
+UIToggle(MainLeft, "Auto Training Only", "Teleport to training part", false, function(on)
     autoTrainOnly = on
     if on then
-        SafeTeleport(TRAIN_SPOT)
-        ShowiOSNotification("Auto Train", "Teleported to training spot!")
+        SafeTeleportToPart("TrainingSpot")
+        ShowiOSNotification("Auto Train", "Teleported to training part!")
     end
     task.spawn(function()
         while autoTrainOnly do
@@ -1007,7 +1003,7 @@ UIToggle(MainLeft, "Timed Dual Farm", "Loop between train and throw", false, fun
     hybridFarmActive = on
     task.spawn(function()
         while hybridFarmActive do
-            SafeTeleport(TRAIN_SPOT)
+            SafeTeleportToPart("TrainingSpot")
             local trainStart = tick()
             while hybridFarmActive and (tick() - trainStart < customTrainTime) do
                 pcall(function()
@@ -1106,12 +1102,6 @@ end))
 
 UIToggle(PlayerRight, "Infinite Jump", "Jump continuously in mid-air", false, function(on)
     infJumpActive = on
-end)
-
--- Search Box กรองปุ่มทั้งหมด
-SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-    local q = string.lower(SearchBox.Text)
-    for _, it in ipairs(SearchItems) do it[1].Visible = (q == "") or string.find(it[2], q, 1, true) ~= nil end
 end)
 
 SettingsPill.MouseButton1Click:Connect(function() SettingsTab.Select() end)
