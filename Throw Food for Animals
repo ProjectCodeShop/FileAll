@@ -1,0 +1,998 @@
+-- [[ Script Word [TH/EN] by ffsww_1007 ]] --
+local protect_env = getgenv and getgenv() or _ENV or shared
+if protect_env.MagicAlayCleanup then pcall(protect_env.MagicAlayCleanup) end
+local ORIG_REQUEST = request or (syn and syn.request) or http_request or (fluxus and fluxus.request) or (Krnl and Krnl.request)
+
+-- ==================== SERVICES ====================
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local SoundService = game:GetService("SoundService")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- ==================== LANGUAGE SYSTEM ====================
+local currentLang = "EN" -- ค่าเริ่มต้นภาษาอังกฤษ
+
+local LangData = {
+    EN = {
+        HubTitle = "MagicAlay Hub",
+        TabMain = "Main",
+        TabPlayer = "Player",
+        TabCredits = "Credits",
+        TabSettings = "Settings",
+        SearchPlaceholder = "Search features...",
+        SecWorkout = "Timed Hybrid Farm",
+        SecDummy = "Dummy & Teleport",
+        SecStats = "Character Stats",
+        SecExtras = "Extras",
+        TrainDur = "Train Duration (s)",
+        ThrowDur = "Throw Duration (s)",
+        SetTrain = "Set Training Spot",
+        SetThrow = "Set Throw Spot",
+        StartFarm = "Start Timed Hybrid Farm",
+        BringDummy = "Bring Dummies to Me",
+        Speed = "WalkSpeed",
+        Jump = "JumpPower",
+        InfJump = "Infinite Jump",
+        SettingsDisplay = "Display & Interface",
+        SettingsExp = "Experience & Audio",
+        SettingsPerf = "Performance & Tools",
+        Blur = "Background Blur",
+        Size = "Window Size",
+        Sound = "Sound Effects",
+        Notif = "Notifications",
+        AntiAFK = "Anti-AFK",
+        FpsBoost = "FPS Boost",
+        FpsCounter = "FPS Counter",
+        Keybind = "RightShift Hotkey",
+        LangToggle = "Language: EN"
+    },
+    TH = {
+        HubTitle = "เมนูหลัก MagicAlay",
+        TabMain = "หน้าหลัก",
+        TabPlayer = "ผู้เล่น",
+        TabCredits = "เครดิต",
+        TabSettings = "ตั้งค่า",
+        SearchPlaceholder = "ค้นหาฟังก์ชัน...",
+        SecWorkout = "ระบบสลับฟาร์มเวลา",
+        SecDummy = "ดึงหุ่นซ้อมและวาร์ป",
+        SecStats = "สถานะตัวละคร",
+        SecExtras = "ฟังก์ชันเสริม",
+        TrainDur = "เวลาเทรน (วินาที)",
+        ThrowDur = "เวลาขว้างรีโมท (วินาที)",
+        SetTrain = "บันทึกจุดเทรน (ตำแหน่งปัจจุบัน)",
+        SetThrow = "บันทึกจุดขว้าง (ตำแหน่งปัจจุบัน)",
+        StartFarm = "เริ่มระบบสลับฟาร์มเวลาอัตโนมัติ",
+        BringDummy = "ดึงหุ่นซ้อมมาไว้ใกล้ตัว",
+        Speed = "ความเร็วเดิน (WalkSpeed)",
+        Jump = "ความสูงกระโดด (JumpPower)",
+        InfJump = "กระโดดกลางอากาศ (Infinite Jump)",
+        SettingsDisplay = "การแสดงผลและหน้าจอ",
+        SettingsExp = "ประสบการณ์และเสียง",
+        SettingsPerf = "ประสิทธิภาพและเครื่องมือ",
+        Blur = "เบลอพื้นหลังฮับ",
+        Size = "ขนาดหน้าต่าง",
+        Sound = "เอฟเฟกต์เสียง",
+        Notif = "การแจ้งเตือน",
+        AntiAFK = "ระบบกันหลุด (Anti-AFK)",
+        FpsBoost = "เร่ง FPS (ลดกราฟิก)",
+        FpsCounter = "แสดงตัวเลข FPS",
+        Keybind = "ปุ่มลัดเปิด/ปิด (RightShift)",
+        LangToggle = "ภาษา: TH"
+    }
+}
+
+-- ==================== CONFIG ====================
+local CONFIG_FILE_NAME = "MagicAlay_UIConfig.json"
+local HUB_VERSION = "v3.0"
+local currentFps = 60
+
+local CREATORS = {
+    { Name = "Sky",      Role = "Creator",     Desc = "Creator of MagicAlay Hub", Color = Color3.fromRGB(191, 90, 242), UserId = nil },
+    { Name = "Aek",      Role = "Creator",     Desc = "Creator of MagicAlay Hub", Color = Color3.fromRGB(80, 140, 255), UserId = nil },
+    { Name = "Saisansk", Role = "Team Member", Desc = "MagicAlay Hub Team",      Color = Color3.fromRGB(255, 159, 10), UserId = nil },
+}
+
+local RAW_ASSET_ID = "103143683174616"
+local TOGGLE_ICON_ID = "134610671303702"
+local BRAND_LOGO_ID = TOGGLE_ICON_ID
+local RECOMMEND_ICON_ID = "9405930424"
+local HOME_ICON_ID = "10723407389"
+local SETTINGS_ICON_ID = "10734950309"
+local CREDIT_ICON_ID = "124353476045890"
+
+local SOUND_MENU = "rbxassetid://111174530730534"
+local SOUND_NOTIF = "rbxassetid://6436188054"
+local SOUND_CLICK = "rbxassetid://91660275693179"
+
+-- ==================== THEME ====================
+local U, RGB = UDim2.new, Color3.fromRGB
+local FB, FM = Enum.Font.GothamBold, Enum.Font.GothamMedium
+local WHITE = RGB(255, 255, 255)
+local BG = RGB(9, 10, 22)
+local PANEL = RGB(15, 17, 34)
+local ROW = RGB(22, 24, 46)
+local LINE = RGB(44, 50, 100)
+local ACC = RGB(64, 74, 255)
+local ACC2 = RGB(112, 120, 255)
+local SUB = RGB(160, 167, 198)
+local DIM = RGB(130, 137, 170)
+local XL, XC, XR = Enum.TextXAlignment.Left, Enum.TextXAlignment.Center, Enum.TextXAlignment.Right
+local TRUNC = Enum.TextTruncate.AtEnd
+
+-- ==================== HELPERS ====================
+local function New(class, props, parent)
+    local o = Instance.new(class)
+    if o:IsA("GuiObject") then o.BorderSizePixel = 0 end
+    for k, v in pairs(props or {}) do o[k] = v end
+    if parent then o.Parent = parent end
+    return o
+end
+local function Corner(o, r) return New("UICorner", { CornerRadius = UDim.new(0, r) }, o) end
+local function Stroke(o, t, th, c)
+    return New("UIStroke", { Color = c or WHITE, Transparency = t or 0.88, Thickness = th or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, o)
+end
+local function Label(parent, props)
+    props.BackgroundTransparency = 1
+    props.Font = props.Font or FM
+    props.TextColor3 = props.TextColor3 or WHITE
+    props.TextXAlignment = props.TextXAlignment or XL
+    props.TextSize = props.TextSize or 12
+    return New("TextLabel", props, parent)
+end
+local function IsPress(i) return i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch end
+local function IsMove(i) return i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch end
+local function PressEffect(btn, amount)
+    local sc = btn:FindFirstChildOfClass("UIScale") or New("UIScale", {}, btn)
+    local hovering, pressing = false, false
+    local function go(target, t, style, dir)
+        TweenService:Create(sc, TweenInfo.new(t, style or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out), { Scale = target }):Play()
+    end
+    btn.MouseEnter:Connect(function() hovering = true if not pressing then go(1.025, 0.18) end end)
+    btn.MouseLeave:Connect(function() hovering = false if not pressing then go(1, 0.22) end end)
+    btn.InputBegan:Connect(function(i) if IsPress(i) then pressing = true go(amount or 0.96, 0.1) end end)
+    btn.InputEnded:Connect(function(i) if IsPress(i) then pressing = false go(hovering and 1.025 or 1, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out) end end)
+end
+
+local soundEnabled, notifEnabled = true, true
+local function PlaySound(soundId)
+    if not soundEnabled then return end
+    pcall(function()
+        local s = Instance.new("Sound")
+        s.SoundId = soundId
+        s.Volume = 0.35
+        s.Parent = SoundService
+        s:Play()
+        s.Ended:Connect(function() s:Destroy() end)
+    end)
+end
+local function ApplyImageAsset(imageLabel, assetId)
+    imageLabel.Image = "rbxassetid://" .. tostring(assetId)
+    task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync({ imageLabel }) end) end)
+end
+local function CopyToClipboard(text)
+    if setclipboard then setclipboard(text) elseif toclipboard then toclipboard(text) end
+end
+
+-- ==================== STORAGE ====================
+local customConfig = { CustomImageId = "", Scale = 1, Blur = true, Sound = true, Notif = true, AntiAFK = true, FpsBoost = false, FpsCounter = false, Keybind = true, Lang = "EN" }
+if readfile and isfile and isfile(CONFIG_FILE_NAME) then
+    pcall(function()
+        local decoded = HttpService:JSONDecode(readfile(CONFIG_FILE_NAME))
+        if type(decoded) == "table" then for k, v in pairs(decoded) do customConfig[k] = v end end
+    end)
+end
+currentLang = customConfig.Lang or "EN"
+
+local function SaveCustomConfig()
+    customConfig.Lang = currentLang
+    if writefile then pcall(function() writefile(CONFIG_FILE_NAME, HttpService:JSONEncode(customConfig)) end) end
+end
+
+local blurEnabled = customConfig.Blur ~= false
+soundEnabled = customConfig.Sound ~= false
+notifEnabled = customConfig.Notif ~= false
+local isOpen = false
+local FloatBtn
+
+-- ==================== SCREEN GUI ====================
+local ScreenGui = New("ScreenGui", { Name = "MagicAlay_VIP_v2", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling })
+if gethui then
+    ScreenGui.Parent = gethui()
+elseif syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = CoreGui
+else
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- ==================== CLEANUP ====================
+local Conns = {}
+local function Track(conn) table.insert(Conns, conn) return conn end
+local function OnInputChanged(fn) return Track(UserInputService.InputChanged:Connect(fn)) end
+protect_env.MagicAlayCleanup = function()
+    for _, c in ipairs(Conns) do pcall(function() c:Disconnect() end) end
+    pcall(function() ScreenGui:Destroy() end)
+    pcall(function()
+        local b = Lighting:FindFirstChild("UIBlurEffect")
+        if b then b.Size = 0 end
+    end)
+    pcall(function()
+        if protect_env.MagicAlayOrigFOV and Workspace.CurrentCamera then
+            Workspace.CurrentCamera.FieldOfView = protect_env.MagicAlayOrigFOV
+        end
+    end)
+end
+
+-- ==================== NOTIFICATION ====================
+local Banner = New("Frame", {
+    Size = U(0, 290, 0, 48), AnchorPoint = Vector2.new(0.5, 0), Position = U(0.5, 0, 0, -70),
+    BackgroundColor3 = RGB(12, 13, 28), Visible = false, ZIndex = 500
+}, ScreenGui)
+Corner(Banner, 12)
+Stroke(Banner, 0.2, 1.2, ACC)
+local NIconBox = New("Frame", { Size = U(0, 32, 0, 32), Position = U(0, 8, 0.5, -16), BackgroundColor3 = ACC }, Banner)
+Corner(NIconBox, 9)
+New("ImageLabel", { Size = U(0, 16, 0, 16), Position = U(0.5, -8, 0.5, -8), BackgroundTransparency = 1, Image = "rbxassetid://8215093320" }, NIconBox)
+local NTitle = Label(Banner, { Size = U(1, -56, 0, 16), Position = U(0, 48, 0, 8), Text = "MagicAlay Hub", Font = FB, TextSize = 12 })
+local NSub = Label(Banner, { Size = U(1, -56, 0, 14), Position = U(0, 48, 0, 25), Text = "", TextSize = 10, TextColor3 = SUB, TextTruncate = TRUNC })
+
+local notifQueue, notifBusy = {}, false
+local function ProcessNotifQueue()
+    if notifBusy or #notifQueue == 0 then return end
+    notifBusy = true
+    local item = table.remove(notifQueue, 1)
+    NTitle.Text = item.Title or "MagicAlay Hub"
+    NSub.Text = item.Message or ""
+    Banner.Visible = true
+    Banner.Position = U(0.5, 0, 0, -70)
+    PlaySound(SOUND_NOTIF)
+    TweenService:Create(Banner, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = U(0.5, 0, 0, 16) }):Play()
+    task.delay(2.6, function()
+        local tw = TweenService:Create(Banner, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In), { Position = U(0.5, 0, 0, -70) })
+        tw:Play()
+        tw.Completed:Connect(function()
+            Banner.Visible = false
+            notifBusy = false
+            task.wait(0.08)
+            ProcessNotifQueue()
+        end)
+    end)
+end
+local function ShowiOSNotification(title, message, force)
+    if not notifEnabled and not force then return end
+    table.insert(notifQueue, { Title = title, Message = message })
+    ProcessNotifQueue()
+end
+
+-- ==================== BLUR ====================
+local BlurEffect = Lighting:FindFirstChild("UIBlurEffect") or Instance.new("BlurEffect")
+BlurEffect.Name = "UIBlurEffect"
+BlurEffect.Size = 0
+BlurEffect.Parent = Lighting
+local OriginalFOV = Camera.FieldOfView
+protect_env.MagicAlayOrigFOV = OriginalFOV
+local function UpdateBlurState()
+    if isOpen and blurEnabled then
+        TweenService:Create(Camera, TweenInfo.new(0.4, Enum.EasingStyle.Quart), { FieldOfView = OriginalFOV - 2 }):Play()
+        TweenService:Create(BlurEffect, TweenInfo.new(0.4, Enum.EasingStyle.Quart), { Size = 18 }):Play()
+    else
+        TweenService:Create(Camera, TweenInfo.new(0.35, Enum.EasingStyle.Quart), { FieldOfView = OriginalFOV }):Play()
+        TweenService:Create(BlurEffect, TweenInfo.new(0.35, Enum.EasingStyle.Quart), { Size = 0 }):Play()
+    end
+end
+
+-- ==================== MAIN WINDOW ====================
+local MainWidth, MainHeight = 580, 340
+local function BaseScale()
+    local vp = Camera.ViewportSize
+    local fit = math.min((vp.X - 20) / MainWidth, (vp.Y - 20) / MainHeight)
+    return math.min(customConfig.Scale or 1, fit)
+end
+
+local MainFrame = New("Frame", {
+    Name = "MainFrame", Size = U(0, MainWidth, 0, MainHeight), AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = U(0.5, 0, 0.5, 0), BackgroundColor3 = BG, Visible = false, Active = true, ClipsDescendants = true
+}, ScreenGui)
+Corner(MainFrame, 14)
+Stroke(MainFrame, 0.2, 1.2, LINE)
+local WindowScale = New("UIScale", { Scale = BaseScale() }, MainFrame)
+
+local CustomBgImage = New("ImageLabel", {
+    Size = U(1, 0, 1, 0), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop, ImageTransparency = 0.6, ZIndex = 0, Visible = false
+}, MainFrame)
+Corner(CustomBgImage, 14)
+local function UpdateBackgroundImage(assetId)
+    if assetId and assetId ~= "" then
+        CustomBgImage.Image = "rbxassetid://" .. tostring(assetId)
+        CustomBgImage.Visible = true
+    else
+        CustomBgImage.Image = ""
+        CustomBgImage.Visible = false
+    end
+end
+UpdateBackgroundImage(customConfig.CustomImageId)
+
+local TopLine = New("Frame", { Size = U(1, -44, 0, 2), Position = U(0, 22, 0, 0), BackgroundColor3 = WHITE, ZIndex = 5 }, MainFrame)
+New("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, RGB(40, 50, 230)), ColorSequenceKeypoint.new(0.5, RGB(170, 90, 255)), ColorSequenceKeypoint.new(1, RGB(40, 50, 230))
+    })
+}, TopLine)
+
+-- ---------- Header ----------
+local HeaderBar = New("Frame", { Size = U(1, 0, 0, 46), BackgroundTransparency = 1 }, MainFrame)
+local HeaderTitleLabel = Label(HeaderBar, { Size = U(0, 200, 0, 18), Position = U(0, 16, 0, 6), Text = LangData[currentLang].HubTitle, Font = FB, TextSize = 15 })
+local SideSub = Label(HeaderBar, { Size = U(0, 270, 0, 14), Position = U(0, 16, 0, 25), Text = "", TextSize = 10, TextColor3 = SUB, RichText = true })
+task.spawn(function()
+    local names, idx = { "Sky & Aek", "Aek & Sky" }, 1
+    while ScreenGui.Parent do
+        SideSub.Text = 'By <font color="rgb(120,160,255)">' .. names[idx] .. '</font> · <font color="rgb(255,196,60)">' .. HUB_VERSION .. ' VIP</font>'
+        idx = idx % #names + 1
+        task.wait(3.5)
+    end
+end)
+
+local function HeaderPill(text, iconId, width, xOffset)
+    local b = New("TextButton", {
+        Size = U(0, width, 0, 26), Position = U(1, xOffset, 0, 10), BackgroundColor3 = RGB(13, 15, 34), Text = "", AutoButtonColor = false
+    }, HeaderBar)
+    Corner(b, 6)
+    Stroke(b, 0.05, 1.2, ACC)
+    local ic = New("ImageLabel", { Size = U(0, 14, 0, 14), Position = U(0, 10, 0.5, -7), BackgroundTransparency = 1, ImageColor3 = WHITE }, b)
+    ApplyImageAsset(ic, iconId)
+    local lbl = Label(b, { Size = U(1, -32, 1, 0), Position = U(0, 30, 0, 0), Text = text, Font = FB, TextSize = 11.5 })
+    PressEffect(b, 0.93)
+    return b, lbl
+end
+
+-- ปุ่มเปลี่ยนภาษาที่หัวข้อ
+local LangPill, LangPillText = HeaderPill("LANG: " .. currentLang, SETTINGS_ICON_ID, 90, -382)
+local SettingsPill, SettingsPillText = HeaderPill("Settings", SETTINGS_ICON_ID, 90, -288)
+local CreditsPill, CreditsPillText = HeaderPill("Credits", CREDIT_ICON_ID, 90, -194)
+
+local function HeaderIconButton(text, xOffset, size)
+    local b = New("TextButton", {
+        Size = U(0, 28, 0, 26), Position = U(1, xOffset, 0, 10), BackgroundTransparency = 1,
+        Text = text, Font = FB, TextSize = size or 20, TextColor3 = WHITE, AutoButtonColor = false
+    }, HeaderBar)
+    PressEffect(b, 0.88)
+    return b
+end
+local MinBtn = HeaderIconButton("–", -76, 22)
+local CloseBtn = HeaderIconButton("×", -42, 24)
+
+-- ---------- Nav row ----------
+local NAV_Y, NAV_H = 50, 30
+local CONTENT_Y = 90
+local SEARCH_W = 150
+
+local SearchFrame = New("Frame", { Size = U(0, SEARCH_W, 0, 28), Position = U(0, 14, 0, NAV_Y + 1), BackgroundColor3 = ROW }, MainFrame)
+Corner(SearchFrame, 8)
+Stroke(SearchFrame, 0.6, 1, LINE)
+local SIcon = New("Frame", { Size = U(0, 10, 0, 10), Position = U(0, 10, 0, 8), BackgroundTransparency = 1 }, SearchFrame)
+Corner(SIcon, 5)
+Stroke(SIcon, 0, 1.5, ACC2)
+local SHandle = New("Frame", { Size = U(0, 5, 0, 1.5), Position = U(0, 19, 0, 20), BackgroundColor3 = ACC2, Rotation = 45 }, SearchFrame)
+local SearchBox = New("TextBox", {
+    Size = U(1, -36, 1, 0), Position = U(0, 28, 0, 0), BackgroundTransparency = 1, Text = "",
+    PlaceholderText = "Search features...", PlaceholderColor3 = DIM, TextColor3 = WHITE, Font = FM, TextSize = 11,
+    TextXAlignment = XL, ClearTextOnFocus = false
+}, SearchFrame)
+
+local TAB_W = 92
+local NavBar = New("Frame", {
+    Size = U(1, -(SEARCH_W + 40), 0, NAV_H), Position = U(0, SEARCH_W + 28, 0, NAV_Y), BackgroundTransparency = 1, ClipsDescendants = true
+}, MainFrame)
+local Underline = New("Frame", { Size = U(0, 36, 0, 3), Position = U(0, 0, 1, -3), BackgroundColor3 = ACC, Visible = false }, NavBar)
+Corner(Underline, 2)
+
+local Content = New("Frame", { Size = U(1, 0, 1, 0), BackgroundTransparency = 1 }, MainFrame)
+
+-- ==================== REUSABLE UI ====================
+local function NewScroll(parent, size, pos, grid)
+    local s = New("ScrollingFrame", {
+        Size = size, Position = pos, BackgroundTransparency = 1, ScrollBarThickness = 3, ScrollBarImageColor3 = ACC2,
+        ScrollBarImageTransparency = 0.3, CanvasSize = U(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y
+    }, parent)
+    if grid then
+        New("UIGridLayout", { CellSize = U(0.5, -9, 0, 54), CellPadding = U(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, s)
+    else
+        New("UIListLayout", { Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder }, s)
+    end
+    New("UIPadding", { PaddingBottom = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, s)
+    return s
+end
+
+local function PanelHeader(parent, title, inset)
+    inset = inset or 4
+    local lbl = Label(parent, { Size = U(1, 0, 0, 26), Position = U(0, 0, 0, 7), Text = title, Font = FB, TextSize = 13, TextXAlignment = XC })
+    for _, x in ipairs({ U(0, inset, 0, 16), U(1, -(64 + inset), 0, 16) }) do
+        local bar = New("Frame", { Size = U(0, 64, 0, 9), Position = x, BackgroundColor3 = WHITE }, parent)
+        Corner(bar, 5)
+        New("UIGradient", { Color = ColorSequence.new(RGB(28, 38, 190), RGB(96, 106, 255)) }, bar)
+    end
+    return lbl
+end
+
+local function Section(parent, title, size, pos, grid)
+    local sec = New("Frame", { Size = size, Position = pos, BackgroundColor3 = PANEL }, parent)
+    Corner(sec, 12)
+    Stroke(sec, 0.55, 1, LINE)
+    local pHead = PanelHeader(sec, title)
+    local scroll = NewScroll(sec, U(1, -16, 1, -42), U(0, 8, 0, 36), grid)
+    return sec, scroll, pHead
+end
+
+local function Row(parent, title, desc, opts)
+    opts = opts or {}
+    local h = opts.Height or (desc and 50 or 40)
+    local r = New(opts.Click and "TextButton" or "Frame", { Size = U(1, 0, 0, h), BackgroundColor3 = opts.Color or ROW }, parent)
+    if opts.Click then
+        r.Text = ""
+        r.AutoButtonColor = false
+        PressEffect(r, 0.98)
+    end
+    Corner(r, 9)
+    local pad = opts.RightPad or 64
+    local t = Label(r, { Size = U(1, -pad, 0, 16), Position = U(0, 12, 0, desc and 8 or (h - 16) / 2), Text = title, Font = FB, TextSize = 12.5, TextTruncate = TRUNC })
+    local d
+    if desc then
+        d = Label(r, {
+            Size = U(1, -pad, 0, h - 28), Position = U(0, 12, 0, 26), Text = desc, TextSize = 10, TextColor3 = SUB,
+            TextWrapped = opts.Wrap or false, TextYAlignment = Enum.TextYAlignment.Top,
+            TextTruncate = opts.Wrap and Enum.TextTruncate.None or TRUNC
+        })
+    end
+    if opts.Chevron then
+        Label(r, { Size = U(0, 20, 1, 0), Position = U(1, -28, 0, 0), Text = "›", Font = FB, TextSize = 22, TextColor3 = ACC2, TextXAlignment = XC })
+    end
+    return r, t, d
+end
+
+local function MakeToggle(row, initial, onChange)
+    local on = initial
+    local track = New("TextButton", {
+        Size = U(0, 46, 0, 24), Position = U(1, -58, 0.5, -12), BackgroundColor3 = RGB(12, 13, 30), Text = "", AutoButtonColor = false
+    }, row)
+    Corner(track, 12)
+    local tStroke = Stroke(track, on and 0.1 or 0.5, 1.2, on and ACC or LINE)
+    local knob = New("Frame", {
+        Size = U(0, 18, 0, 18), Position = on and U(1, -21, 0.5, -9) or U(0, 3, 0.5, -9),
+        BackgroundColor3 = on and ACC2 or RGB(150, 152, 168)
+    }, track)
+    Corner(knob, 9)
+    local function apply(v)
+        on = v
+        TweenService:Create(knob, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = on and U(1, -21, 0.5, -9) or U(0, 3, 0.5, -9), BackgroundColor3 = on and ACC2 or RGB(150, 152, 168)
+        }):Play()
+        TweenService:Create(tStroke, TweenInfo.new(0.25), { Transparency = on and 0.1 or 0.5, Color = on and ACC or LINE }):Play()
+    end
+    track.MouseButton1Click:Connect(function()
+        PlaySound(SOUND_CLICK)
+        apply(not on)
+        onChange(on)
+    end)
+    return apply
+end
+
+local function BuildAvatar(parent, size, color, name, userId, pos)
+    local holder = New("Frame", { Size = U(0, size, 0, size), Position = pos, BackgroundColor3 = color, BackgroundTransparency = 0.7 }, parent)
+    Corner(holder, size / 2)
+    Stroke(holder, 0.2, 1.5, color)
+    local initial = Label(holder, { Size = U(1, 0, 1, 0), Text = string.upper(string.sub(name, 1, 1)), Font = FB, TextSize = math.floor(size * 0.45), TextXAlignment = XC })
+    if userId then
+        task.spawn(function()
+            pcall(function()
+                local content, ok = Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+                if ok then
+                    initial.Visible = false
+                    local img = New("ImageLabel", { Size = U(1, 0, 1, 0), BackgroundTransparency = 1, Image = content }, holder)
+                    Corner(img, size / 2)
+                end
+            end)
+        end)
+    end
+    return holder
+end
+
+local function SubLabel(parent, text)
+    local h = New("Frame", { Size = U(1, 0, 0, 18), BackgroundTransparency = 1 }, parent)
+    local lbl = Label(h, { Size = U(0, 140, 1, 0), Position = U(0, 4, 0, 2), Text = text, Font = FB, TextSize = 9.5, TextColor3 = ACC2 })
+    local line = New("Frame", { Size = U(1, -60, 0, 1), Position = U(0, 60, 0.5, 1), BackgroundColor3 = LINE, BackgroundTransparency = 0.35 }, h)
+    New("UIGradient", { Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }) }, line)
+    local function place()
+        local w = lbl.TextBounds.X + 12
+        line.Position = U(0, w, 0.5, 1)
+        line.Size = U(1, -(w + 4), 0, 1)
+    end
+    place()
+    lbl:GetPropertyChangedSignal("TextBounds"):Connect(place)
+    return h, lbl
+end
+
+-- ==================== TAB SYSTEM ====================
+local Tabs = {}
+local currentTab
+local INACTIVE_TXT = RGB(150, 157, 190)
+
+local function LayoutTabs(animate)
+    local i = 0
+    for _, t in ipairs(Tabs) do
+        if t.Button and t.Button.Visible then
+            t.X = i * TAB_W
+            i = i + 1
+            if animate then
+                t.Button.Position = U(0, t.X, 0, 8)
+                TweenService:Create(t.Button, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = U(0, t.X, 0, 0) }):Play()
+            else
+                t.Button.Position = U(0, t.X, 0, 0)
+            end
+        end
+    end
+end
+
+local function CreateTab(tabNameKey, iconId, hidden)
+    local tab = { NameKey = tabNameKey, Hidden = hidden, X = 0 }
+    if not hidden then
+        local btn = New("TextButton", { Size = U(0, TAB_W, 0, NAV_H), BackgroundTransparency = 1, Text = "", AutoButtonColor = false }, NavBar)
+        local icon = New("ImageLabel", { Size = U(0, 16, 0, 16), Position = U(0, 6, 0.5, -8), BackgroundTransparency = 1, ImageColor3 = INACTIVE_TXT }, btn)
+        ApplyImageAsset(icon, iconId or RAW_ASSET_ID)
+        local lbl = Label(btn, { Size = U(1, -26, 1, 0), Position = U(0, 26, 0, 0), Text = LangData[currentLang][tabNameKey] or tabNameKey, Font = FB, TextSize = 11.5, TextColor3 = INACTIVE_TXT })
+        tab.Button, tab.Icon, tab.Label = btn, icon, lbl
+        PressEffect(btn, 0.92)
+    end
+
+    local area = New("CanvasGroup", {
+        Size = U(1, -28, 1, -(CONTENT_Y + 14)), Position = U(0, 14, 0, CONTENT_Y), BackgroundTransparency = 1, Visible = false, GroupTransparency = 1
+    }, Content)
+    tab.Area, tab.Body = area, area
+
+    tab.Select = function()
+        PlaySound(SOUND_MENU)
+        for _, t in ipairs(Tabs) do
+            if t ~= tab then
+                t.Area.Visible = false
+                if t.Button then
+                    TweenService:Create(t.Icon, TweenInfo.new(0.2), { ImageColor3 = INACTIVE_TXT }):Play()
+                    TweenService:Create(t.Label, TweenInfo.new(0.2), { TextColor3 = INACTIVE_TXT }):Play()
+                end
+            end
+        end
+        currentTab = tab
+        if tab.Button then
+            local ux = tab.X + (TAB_W - 36) / 2
+            if not Underline.Visible then Underline.Position = U(0, ux, 1, -3) end
+            Underline.Visible = true
+            TweenService:Create(Underline, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = U(0, ux, 1, -3) }):Play()
+            TweenService:Create(tab.Icon, TweenInfo.new(0.2), { ImageColor3 = WHITE }):Play()
+            TweenService:Create(tab.Label, TweenInfo.new(0.2), { TextColor3 = WHITE }):Play()
+        else
+            Underline.Visible = false
+        end
+        area.Visible = true
+        area.GroupTransparency = 1
+        area.Position = U(0, 14, 0, CONTENT_Y + 14)
+        TweenService:Create(area, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = U(0, 14, 0, CONTENT_Y), GroupTransparency = 0 }):Play()
+    end
+    if tab.Button then tab.Button.MouseButton1Click:Connect(tab.Select) end
+    table.insert(Tabs, tab)
+    return tab
+end
+
+-- ==================== DISCORD JOIN ====================
+local function JoinDiscord()
+    local opened = false
+    if ORIG_REQUEST then
+        pcall(function()
+            local r = ORIG_REQUEST({
+                Url = "http://127.0.0.1:6463/rpc?v=1", Method = "POST",
+                Headers = { ["Content-Type"] = "application/json", Origin = "https://discord.com" },
+                Body = HttpService:JSONEncode({ cmd = "INVITE_BROWSER", args = { code = "rejKjgnvx" }, nonce = HttpService:GenerateGUID(false) })
+            })
+            if r and (r.StatusCode or 0) < 300 then opened = true end
+        end)
+    end
+    if not opened then CopyToClipboard("https://discord.gg/rejKjgnvx") end
+    ShowiOSNotification("Discord", opened and "Opening Discord..." or "Link copied to clipboard")
+end
+
+-- ==================== BUILD PAGES ====================
+local MainTab = CreateTab("TabMain", RECOMMEND_ICON_ID)
+local PlayerTab = CreateTab("TabPlayer", HOME_ICON_ID)
+local CreditTab = CreateTab("TabCredits", CREDIT_ICON_ID, true)
+local SettingsTab = CreateTab("TabSettings", SETTINGS_ICON_ID, true)
+
+-- เก็บรายการข้อความทั้งหมดใน UI เพื่อให้สามารถอัปเดตภาษาได้ทันที
+local TextRegistry = {}
+local function RegisterText(instance, key, isPlaceholder)
+    table.insert(TextRegistry, { Inst = instance, Key = key, IsPlaceholder = isPlaceholder })
+    instance.Text = LangData[currentLang][key] or key
+end
+
+local function UpdateAllLanguageUI()
+    local l = LangData[currentLang]
+    HeaderTitleLabel.Text = l.HubTitle
+    LangPillText.Text = "LANG: " .. currentLang
+    SettingsPillText.Text = l.TabSettings
+    CreditsPillText.Text = l.TabCredits
+    SearchBox.PlaceholderText = l.SearchPlaceholder
+    
+    for _, item in ipairs(TextRegistry) do
+        if item.Inst and item.Inst.Parent then
+            if item.IsPlaceholder then
+                item.Inst.PlaceholderText = l[item.Key] or item.Key
+            else
+                item.Inst.Text = l[item.Key] or item.Key
+            end
+        end
+    end
+    for _, t in ipairs(Tabs) do
+        if t.Label and t.NameKey then
+            t.Label.Text = l[t.NameKey] or t.NameKey
+        end
+    end
+end
+
+-- ==================== CREDITS PAGE ====================
+local function SetupCreditsPage(page)
+    local _, left = Section(page, "MagicAlay Hub", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
+    local _, right = Section(page, "Creators & Team", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+
+    local Hero = New("Frame", { Size = U(1, 0, 0, 74), BackgroundColor3 = ROW }, left)
+    Corner(Hero, 9)
+    local LogoBox = New("Frame", { Size = U(0, 52, 0, 52), Position = U(0, 12, 0.5, -26), BackgroundColor3 = BG }, Hero)
+    Corner(LogoBox, 26)
+    Stroke(LogoBox, 0.2, 1.5, ACC)
+    local L = New("ImageLabel", { Size = U(1, 0, 1, 0), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Crop }, LogoBox)
+    Corner(L, 26)
+    ApplyImageAsset(L, BRAND_LOGO_ID)
+    Label(Hero, { Size = U(1, -80, 0, 20), Position = U(0, 74, 0, 17), Text = "MagicAlay Hub", Font = FB, TextSize = 15 })
+    Label(Hero, { Size = U(1, -80, 0, 14), Position = U(0, 74, 0, 40), Text = "Official Script Hub", TextSize = 10.5, TextColor3 = SUB })
+
+    local Ver = Row(left, "Version", nil, {})
+    Label(Ver, { Size = U(0, 80, 1, 0), Position = U(1, -92, 0, 0), Text = HUB_VERSION .. " VIP", Font = FB, TextSize = 12, TextColor3 = RGB(255, 196, 60), TextXAlignment = XR })
+    local Join = Row(left, "Join Discord", "Questions or bugs? Ask us.", { Click = true, Chevron = true })
+    Join.MouseButton1Click:Connect(function() PlaySound(SOUND_CLICK) JoinDiscord() end)
+
+    for _, m in ipairs(CREATORS) do
+        local r = New("Frame", { Size = U(1, 0, 0, 56), BackgroundColor3 = ROW }, right)
+        Corner(r, 9)
+        BuildAvatar(r, 38, m.Color, m.Name, m.UserId, U(0, 10, 0.5, -19))
+        Label(r, { Size = U(1, -150, 0, 18), Position = U(0, 56, 0, 10), Text = m.Name, Font = FB, TextSize = 13.5, TextTruncate = TRUNC })
+        Label(r, { Size = U(1, -150, 0, 14), Position = U(0, 56, 0, 30), Text = m.Desc or "", TextSize = 10, TextColor3 = SUB, TextTruncate = TRUNC })
+        local Badge = New("Frame", { Size = U(0, 84, 0, 22), Position = U(1, -94, 0.5, -11), BackgroundColor3 = m.Color, BackgroundTransparency = 0.78 }, r)
+        Corner(Badge, 6)
+        Stroke(Badge, 0.4, 1, m.Color)
+        Label(Badge, { Size = U(1, 0, 1, 0), Text = string.upper(m.Role), Font = FB, TextSize = 9, TextXAlignment = XC })
+    end
+end
+SetupCreditsPage(CreditTab.Body)
+
+-- ==================== SETTINGS PAGE ====================
+local function SetupSettingsPage(page)
+    local _, left = Section(page, "SettingsDisplay", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
+    local _, right = Section(page, "SettingsPerf", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+
+    local _, sub1 = SubLabel(left, "DISPLAY")
+    RegisterText(sub1, "SettingsDisplay")
+    
+    local BlurRow = Row(left, "Background Blur", "Blur the game while the hub is open")
+    MakeToggle(BlurRow, blurEnabled, function(state)
+        blurEnabled = state
+        customConfig.Blur = state
+        SaveCustomConfig()
+        UpdateBlurState()
+    end)
+
+    local _, sub2 = SubLabel(left, "EXPERIENCE")
+    RegisterText(sub2, "SettingsExp")
+    
+    local SoundRow = Row(left, "Sound Effects", "Menu and click sounds")
+    MakeToggle(SoundRow, soundEnabled, function(state) soundEnabled = state customConfig.Sound = state SaveCustomConfig() end)
+    
+    local NotifRow = Row(left, "Notifications", "Pop-up banners at the top")
+    MakeToggle(NotifRow, notifEnabled, function(state) notifEnabled = state customConfig.Notif = state SaveCustomConfig() end)
+
+    local _, sub3 = SubLabel(right, "PERFORMANCE")
+    RegisterText(sub3, "SettingsPerf")
+    
+    local AfkRow = Row(left, "Anti-AFK", "Stay in game without idling out")
+    MakeToggle(AfkRow, customConfig.AntiAFK ~= false, function(state) customConfig.AntiAFK = state SaveCustomConfig() end)
+    
+    local KeyRow = Row(left, "RightShift Hotkey", "Press RightShift to open/close")
+    MakeToggle(KeyRow, customConfig.Keybind ~= false, function(state) customConfig.Keybind = state SaveCustomConfig() end)
+
+    local Rejoin = Row(right, "Rejoin Server", "Reconnect to this same server", { Click = true, Chevron = true })
+    Rejoin.MouseButton1Click:Connect(function() PlaySound(SOUND_CLICK) pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end) end)
+end
+SetupSettingsPage(SettingsTab.Body)
+
+-- ==================== MAIN PAGE (Timed Hybrid Farm + Dummies) ====================
+local _, MainLeft = Section(MainTab.Body, "SecWorkout", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
+local _, MainRight = Section(MainTab.Body, "SecDummy", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+
+local _, subWorkout = SubLabel(MainLeft, "TIMED HYBRID FARM")
+RegisterText(subWorkout, "SecWorkout")
+
+local hybridActive = false
+local trainDuration = 30
+local throwDuration = 10
+local trainingPosition = nil
+local throwTargetPosition = CFrame.new(0, 10, 0)
+
+-- Slider สำหรับปรับเวลา Training
+local rTrain = Row(MainLeft, "Train Duration (s)", "", { Height = 54 })
+RegisterText(rTrain:FindFirstChildWhichIsA("TextLabel") or rTrain, "TrainDur")
+local vTrain = Label(rTrain, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = tostring(trainDuration), Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
+local barTrain = New("Frame", { Size = U(1, -24, 0, 6), Position = U(0, 12, 0, 38), BackgroundColor3 = RGB(12, 13, 30) }, rTrain)
+Corner(barTrain, 3)
+local fillTrain = New("Frame", { Size = U(0.1, 0, 1, 0), BackgroundColor3 = ACC }, barTrain)
+Corner(fillTrain, 3)
+local hitTrain = New("TextButton", { Size = U(1, 0, 0, 24), Position = U(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false }, barTrain)
+hitTrain.MouseButton1Click:Connect(function()
+    trainDuration = 55
+    vTrain.Text = tostring(trainDuration)
+end)
+
+-- Slider สำหรับปรับเวลา Throw
+local rThrow = Row(MainLeft, "Throw Duration (s)", "", { Height = 54 })
+RegisterText(rThrow:FindFirstChildWhichIsA("TextLabel") or rThrow, "ThrowDur")
+local vThrow = Label(rThrow, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = tostring(throwDuration), Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
+local barThrow = New("Frame", { Size = U(1, -24, 0, 6), Position = U(0, 12, 0, 38), BackgroundColor3 = RGB(12, 13, 30) }, rThrow)
+Corner(barThrow, 3)
+local fillThrow = New("Frame", { Size = U(0.15, 0, 1, 0), BackgroundColor3 = ACC }, barThrow)
+Corner(fillThrow, 3)
+
+local btnSetTrain = Row(MainLeft, "Set Training Spot", "Save current position for training", { Click = true, Chevron = true })
+RegisterText(btnSetTrain:FindFirstChildWhichIsA("TextLabel"), "SetTrain")
+btnSetTrain.MouseButton1Click:Connect(function()
+    PlaySound(SOUND_CLICK)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        trainingPosition = char.HumanoidRootPart.CFrame
+        ShowiOSNotification("Hybrid Farm", "Training spot saved successfully!")
+    end
+end)
+
+local btnSetThrow = Row(MainLeft, "Set Throw Spot", "Save remote throw location", { Click = true, Chevron = true })
+RegisterText(btnSetThrow:FindFirstChildWhichIsA("TextLabel"), "SetThrow")
+btnSetThrow.MouseButton1Click:Connect(function()
+    PlaySound(SOUND_CLICK)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        throwTargetPosition = char.HumanoidRootPart.CFrame
+        ShowiOSNotification("Hybrid Farm", "Throw spot saved successfully!")
+    end
+end)
+
+local toggleFarm = Row(MainLeft, "Start Timed Hybrid Farm", "Auto switch between training and remote throwing")
+RegisterText(toggleFarm:FindFirstChildWhichIsA("TextLabel"), "StartFarm")
+MakeToggle(toggleFarm, false, function(on)
+    hybridActive = on
+    task.spawn(function()
+        while hybridActive do
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root and not trainingPosition then trainingPosition = root.CFrame end
+
+            -- 1. Training Phase
+            local startTime = tick()
+            while hybridActive and (tick() - startTime < trainDuration) do
+                pcall(function()
+                    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+                    if remotes and remotes:FindFirstChild("Training_Start") then
+                        remotes.Training_Start:InvokeServer(table.unpack({n = 0}, 1, 0))
+                    end
+                end)
+                task.wait(0.2)
+            end
+
+            if not hybridActive then break end
+
+            -- 2. Teleport to Throw Remote Spot
+            if root and trainingPosition then root.CFrame = throwTargetPosition end
+
+            local throwStartTime = tick()
+            while hybridActive and (tick() - throwStartTime < throwDuration) do
+                pcall(function()
+                    local remotes = ReplicatedStorage:WaitForChild("Remotes")
+                    local throwStart = remotes:WaitForChild("Throw_Start")
+                    local throwResolve = remotes:WaitForChild("Throw_Resolve")
+                    local analyticsFps = ReplicatedStorage:FindFirstChild("UserGenerated") 
+                        and ReplicatedStorage.UserGenerated:FindFirstChild("Analytics") 
+                        and ReplicatedStorage.UserGenerated.Analytics.ClientKit 
+                        and ReplicatedStorage.UserGenerated.Analytics.ClientKit:FindFirstChild("Fps")
+
+                    if analyticsFps then
+                        analyticsFps:FireServer(table.unpack({ [1] = 6, [2] = 43.0550357000591, [3] = 4, n = 3 }, 1, 3))
+                    end
+
+                    throwStart:InvokeServer(table.unpack({n = 0}, 1, 0))
+                    task.wait(0.12)
+                    throwResolve:InvokeServer(table.unpack({ [1] = 0.21420293186691322, n = 1 }, 1, 1))
+                end)
+                task.wait(0.3)
+            end
+
+            if not hybridActive then break end
+
+            -- 3. Teleport back to Training Spot
+            if root and trainingPosition then root.CFrame = trainingPosition end
+        end
+    end)
+end)
+
+local _, subDummy = SubLabel(MainRight, "DUMMY TELEPORT")
+RegisterText(subDummy, "SecDummy")
+
+local btnBring = Row(MainRight, "Bring Dummies to Me", "Teleport training dummies to your location", { Click = true, Chevron = true })
+RegisterText(btnBring:FindFirstChildWhichIsA("TextLabel"), "BringDummy")
+btnBring.MouseButton1Click:Connect(function()
+    PlaySound(SOUND_CLICK)
+    pcall(function()
+        local char = LocalPlayer.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        local myPos = char.HumanoidRootPart.Position + (char.HumanoidRootPart.CFrame.LookVector * 4)
+        
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and (obj:FindFirstChild("Humanoid") or obj:FindFirstChild("HumanoidRootPart")) and obj ~= char then
+                local rootPart = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
+                if rootPart then rootPart.CFrame = CFrame.new(myPos) end
+            end
+        end
+        ShowiOSNotification("Dummy Teleport", "Training dummies brought to you!")
+    end)
+end)
+
+-- ==================== PLAYER PAGE ====================
+local _, PlayerLeft = Section(PlayerTab.Body, "SecStats", U(0.5, -6, 1, 0), U(0, 0, 0, 0))
+local _, PlayerRight = Section(PlayerTab.Body, "SecExtras", U(0.5, -6, 1, 0), U(0.5, 6, 0, 0))
+
+local function Hum() return LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") end
+
+local rSpeed = Row(PlayerLeft, "WalkSpeed", "", { Height = 54 })
+RegisterText(rSpeed:FindFirstChildWhichIsA("TextLabel"), "Speed")
+local vSpeed = Label(rSpeed, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = "16", Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
+local barSpeed = New("Frame", { Size = U(1, -24, 0, 6), Position = U(0, 12, 0, 38), BackgroundColor3 = RGB(12, 13, 30) }, rSpeed)
+Corner(barSpeed, 3)
+local fillSpeed = New("Frame", { Size = U(0, 0, 1, 0), BackgroundColor3 = ACC }, barSpeed)
+Corner(fillSpeed, 3)
+local hitSpeed = New("TextButton", { Size = U(1, 0, 0, 24), Position = U(0, 0, 0.5, -12), BackgroundTransparency = 1, Text = "", AutoButtonColor = false }, barSpeed)
+hitSpeed.MouseButton1Click:Connect(function()
+    local h = Hum()
+    if h then h.WalkSpeed = 50 vSpeed.Text = "50" fillSpeed.Size = U(0.2, 0, 1, 0) end
+end)
+
+local rJump = Row(PlayerLeft, "JumpPower", "", { Height = 54 })
+RegisterText(rJump:FindFirstChildWhichIsA("TextLabel"), "Jump")
+local vJump = Label(rJump, { Size = U(0, 56, 0, 16), Position = U(1, -68, 0, 8), Text = "50", Font = FB, TextSize = 12, TextColor3 = ACC2, TextXAlignment = XR })
+
+local infJump = false
+Track(UserInputService.JumpRequest:Connect(function()
+    if infJump then local h = Hum() if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end
+end))
+local toggleInf = Row(PlayerRight, "Infinite Jump", "Jump infinitely in the air")
+RegisterText(toggleInf:FindFirstChildWhichIsA("TextLabel"), "InfJump")
+MakeToggle(toggleInf, false, function(on) infJump = on end)
+
+-- ==================== EVENT BINDINGS ====================
+LangPill.MouseButton1Click:Connect(function()
+    PlaySound(SOUND_CLICK)
+    currentLang = (currentLang == "EN") and "TH" or "EN"
+    SaveCustomConfig()
+    UpdateAllLanguageUI()
+    ShowiOSNotification("Language", "Switched to " .. currentLang)
+end)
+
+SettingsPill.MouseButton1Click:Connect(function() SettingsTab.Select() end)
+CreditsPill.MouseButton1Click:Connect(function() CreditTab.Select() end)
+
+SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local q = string.lower(SearchBox.Text)
+    -- สามารถเพิ่มระบบกรองค้นหาได้ที่นี่
+end)
+
+-- ==================== OPEN / CLOSE ====================
+local function SetOpen(state)
+    if isOpen == state then return end
+    isOpen = state
+    PlaySound(SOUND_MENU)
+    UpdateBlurState()
+    local base = BaseScale()
+    if state then
+        MainFrame.Visible = true
+        WindowScale.Scale = base * 0.86
+        TweenService:Create(WindowScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = base }):Play()
+        LayoutTabs(true)
+    else
+        local tw = TweenService:Create(WindowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), { Scale = base * 0.85 })
+        tw:Play()
+        tw.Completed:Connect(function() if not isOpen then MainFrame.Visible = false end end)
+    end
+end
+MinBtn.MouseButton1Click:Connect(function() SetOpen(false) end)
+Track(UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe or customConfig.Keybind == false then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then SetOpen(not isOpen) end
+end))
+CloseBtn.MouseButton1Click:Connect(function()
+    SetOpen(false)
+    task.delay(0.4, function() if protect_env.MagicAlayCleanup then protect_env.MagicAlayCleanup() end end)
+end)
+
+-- Window Dragging
+do
+    local dragging, dragStart, startPos
+    HeaderBar.InputBegan:Connect(function(input)
+        if IsPress(input) then dragging = true dragStart = input.Position startPos = MainFrame.Position end
+    end)
+    OnInputChanged(function(input)
+        if dragging and IsMove(input) then
+            local d = input.Position - dragStart
+            MainFrame.Position = U(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+        end
+    end)
+end
+
+-- Floating Button
+FloatBtn = New("ImageButton", {
+    Name = "FloatingToggle", Size = U(0, 52, 0, 52), Position = U(0, 16, 0.5, -26), BackgroundColor3 = BG,
+    ScaleType = Enum.ScaleType.Crop, Visible = false, ZIndex = 150
+}, ScreenGui)
+Corner(FloatBtn, 26)
+ApplyImageAsset(FloatBtn, TOGGLE_ICON_ID)
+local FloatStroke = Stroke(FloatBtn, 0.1, 2)
+local FloatGrad = New("UIGradient", {
+    Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, RGB(64, 74, 255)), ColorSequenceKeypoint.new(0.5, RGB(191, 90, 242)), ColorSequenceKeypoint.new(1, RGB(64, 74, 255)) })
+}, FloatStroke)
+local FloatScale = New("UIScale", {}, FloatBtn)
+
+do
+    local dragging, moved, dragStart, startPos = false, false, nil, nil
+    FloatBtn.InputBegan:Connect(function(input)
+        if IsPress(input) then
+            dragging, moved = true, false dragStart = input.Position startPos = FloatBtn.Position
+            TweenService:Create(FloatScale, TweenInfo.new(0.12), { Scale = 0.9 }):Play()
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    TweenService:Create(FloatScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+                    if not moved then SetOpen(not isOpen) end
+                end
+            end)
+        end
+    end)
+    OnInputChanged(function(input)
+        if dragging and IsMove(input) then
+            local d = input.Position - dragStart
+            if d.Magnitude > 6 then moved = true end
+            if moved then FloatBtn.Position = U(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end
+        end
+    end)
+end
+
+local t0 = os.clock()
+Track(RunService.Heartbeat:Connect(function(dt)
+    FloatGrad.Rotation = ((os.clock() - t0) * 90) % 360
+    if dt > 0 then currentFps = currentFps + (1 / dt - currentFps) * 0.1 end
+end))
+
+-- ==================== START ====================
+FloatBtn.Visible = true
+FloatBtn.Position = U(0, -60, 0.5, -26)
+TweenService:Create(FloatBtn, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = U(0, 16, 0.5, -26) }):Play()
+UpdateAllLanguageUI()
+LayoutTabs(false)
+MainTab.Select()
+SetOpen(true)
