@@ -1,0 +1,777 @@
+-- ==========================================
+-- MagicAlay Script Hub - Anti-Kick & AFK Enhanced Version
+-- ==========================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
+local Workspace = game:GetService("Workspace")
+local TeleportService = game:GetService("TeleportService")
+local GuiService = game:GetService("GuiService")
+
+local player = Players.LocalPlayer
+
+local remotesFolder = ReplicatedStorage:WaitForChild("Remotes", 5)
+local swingRemote = remotesFolder and remotesFolder:WaitForChild("Swing", 5)
+
+_G.MagicAlayMiniFarm = _G.MagicAlayMiniFarm or {}
+_G.MagicAlayMiniFarm.Active = false
+
+_G.MagicAlayAFK = _G.MagicAlayAFK or {}
+_G.MagicAlayAFK.Active = true -- เปิดใช้งานระบบกันหลุด/กัน AFK อัตโนมัติ
+
+_G.MagicAlaySettings = _G.MagicAlaySettings or {
+    AntiFling = true,
+    FastAttack = true
+}
+
+_G.MagicAlayAutoBuySword = _G.MagicAlayAutoBuySword or true
+_G.MagicAlayAutoClaimQuest = _G.MagicAlayAutoClaimQuest or true
+
+local attackSpeed = 0.14
+local maxScanDist = 250
+
+local groundSpot = nil
+local currentTarget = nil
+local dodgeDirection = 1
+local dodgeTimer = 0
+local startTime = tick()
+
+local TARGET_FOLDER_NAME = "Monsters"
+
+local function getEnemyData(model)
+    if not model:IsA("Model") then return nil end
+    
+    local monsterFolder = Workspace:FindFirstChild(TARGET_FOLDER_NAME)
+    if not monsterFolder or not model:IsDescendantOf(monsterFolder) then
+        return nil
+    end
+
+    local modelName = model.Name
+    if not modelName or modelName == "" or modelName:match("^%s*$") then
+        return nil
+    end
+
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    local hrp = model:FindFirstChild("HumanoidRootPart")
+    
+    if not hum or not hrp or hum.Health <= 0 then return nil end
+    
+    local name = modelName:lower()
+    if name:find("dummy") or name:find("npc") or name:find("trainer") or name:find("test") or name:find("prisoner") or name:find("captive") or name:find("hostage") or name:find("เชลย") then
+        return nil
+    end
+    
+    if Players:GetPlayerFromCharacter(model) then
+        return nil
+    end
+
+    local isBoss = hum.MaxHealth > 1000 or name:find("boss") or name:find("king") or name:find("leader") or name:find("dragon")
+    
+    return {
+        Model = model,
+        HRP = hrp,
+        Humanoid = hum,
+        IsBoss = isBoss
+    }
+end
+
+-- ==========================================
+-- 1. UI สไตล์ MagicAlay คลีนๆ
+-- ==========================================
+pcall(function()
+    if CoreGui:FindFirstChild("MagicalayFloatingCleanUI") then
+        CoreGui.MagicalayFloatingCleanUI:Destroy()
+    end
+end)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MagicalayFloatingCleanUI"
+ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local MainFrame = Instance.new("ImageLabel")
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+MainFrame.Image = "rbxassetid://121648302029106"
+MainFrame.ScaleType = Enum.ScaleType.Stretch
+MainFrame.Position = UDim2.new(0.5, -260, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 520, 0, 310)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = true
+MainFrame.BackgroundTransparency = 0
+MainFrame.ClipsDescendants = true
+
+local BackgroundOverlay = Instance.new("Frame")
+BackgroundOverlay.Parent = MainFrame
+BackgroundOverlay.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
+BackgroundOverlay.BackgroundTransparency = 0.35
+BackgroundOverlay.Size = UDim2.new(1, 0, 1, 0)
+BackgroundOverlay.ZIndex = 0
+
+local OverlayCorner = Instance.new("UICorner")
+OverlayCorner.CornerRadius = UDim.new(0, 8)
+OverlayCorner.Parent = BackgroundOverlay
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainFrame
+
+local Logo = Instance.new("TextLabel")
+Logo.Parent = MainFrame
+Logo.BackgroundTransparency = 1
+Logo.Position = UDim2.new(0, 12, 0, 10)
+Logo.Size = UDim2.new(0, 110, 0, 18)
+Logo.Font = Enum.Font.GothamBold
+Logo.Text = "MagicAlay"
+Logo.TextColor3 = Color3.fromRGB(130, 105, 255)
+Logo.TextSize = 14
+Logo.TextXAlignment = Enum.TextXAlignment.Left
+Logo.ZIndex = 2
+
+-- (ห้ามเปลี่ยนขอบล่างตามคำสั่ง)
+local Footer = Instance.new("TextLabel")
+Footer.Parent = MainFrame
+Footer.BackgroundTransparency = 1
+Footer.Position = UDim2.new(0, 12, 1, -16)
+Footer.Size = UDim2.new(0, 260, 0, 14)
+Footer.Font = Enum.Font.Gotham
+Footer.Text = "MagicAlay Official : Aek,Sky,Saisansk"
+Footer.TextColor3 = Color3.fromRGB(150, 150, 165)
+Footer.TextSize = 8
+Footer.TextXAlignment = Enum.TextXAlignment.Left
+Footer.ZIndex = 2
+
+-- (ห้ามเปลี่ยนขอบล่างตามคำสั่ง)
+local VersionText = Instance.new("TextLabel")
+VersionText.Parent = MainFrame
+VersionText.BackgroundTransparency = 1
+VersionText.Position = UDim2.new(1, -125, 1, -16)
+VersionText.Size = UDim2.new(0, 115, 0, 14)
+VersionText.Font = Enum.Font.Gotham
+VersionText.Text = "ScripterPro, MagicAlay"
+VersionText.TextColor3 = Color3.fromRGB(150, 150, 165)
+VersionText.TextSize = 8
+VersionText.TextXAlignment = Enum.TextXAlignment.Right
+VersionText.ZIndex = 2
+
+local OpenButton = Instance.new("ImageButton")
+OpenButton.Parent = ScreenGui
+OpenButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+OpenButton.Image = "rbxassetid://134610671303702"
+OpenButton.Position = UDim2.new(0, 50, 0, 50)
+OpenButton.Size = UDim2.new(0, 45, 0, 45)
+OpenButton.Active = true
+OpenButton.Draggable = true
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(1, 0)
+OpenCorner.Parent = OpenButton
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(130, 105, 255)
+OpenStroke.Thickness = 2
+OpenStroke.Parent = OpenButton
+
+local uiVisible = true
+OpenButton.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    if uiVisible then
+        MainFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 520, 0, 310),
+            BackgroundTransparency = 0
+        }):Play()
+    else
+        local tw = TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1
+        })
+        tw:Play()
+        tw.Completed:Connect(function()
+            if not uiVisible then MainFrame.Visible = false end
+        end)
+    end
+end)
+
+local ContentPages = {}
+local function createPage(name)
+    local page = Instance.new("Frame")
+    page.Name = name .. "Page"
+    page.Parent = MainFrame
+    page.BackgroundTransparency = 1
+    page.Position = UDim2.new(0, 115, 0, 12)
+    page.Size = UDim2.new(0, 390, 0, 280)
+    page.Visible = false
+    page.ZIndex = 2
+    ContentPages[name] = page
+    return page
+end
+
+local homePage = createPage("Home")
+local combatPage = createPage("Combat")
+local settingsPage = createPage("Settings")
+
+homePage.Visible = true
+
+local Sidebar = Instance.new("Frame")
+Sidebar.Parent = MainFrame
+Sidebar.BackgroundTransparency = 1
+Sidebar.Position = UDim2.new(0, 12, 0, 36)
+Sidebar.Size = UDim2.new(0, 95, 0, 255)
+Sidebar.ZIndex = 2
+
+local menuItems = {"Home", "Combat", "Settings"}
+local sidebarButtons = {}
+
+local function addSidebarLabel(text, y)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = Sidebar
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0, 0, 0, y)
+    lbl.Size = UDim2.new(0, 95, 0, 14)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(150, 150, 165)
+    lbl.TextSize = 9
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 2
+end
+
+addSidebarLabel("Menu", 0)
+
+for i, menuName in ipairs(menuItems) do
+    local btn = Instance.new("TextButton")
+    btn.Parent = Sidebar
+    btn.BackgroundColor3 = (i == 1) and Color3.fromRGB(28, 28, 35) or Color3.fromRGB(20, 20, 25)
+    btn.Position = UDim2.new(0, 0, 0, 20 + ((i - 1) * 30))
+    btn.Size = UDim2.new(0, 95, 0, 24)
+    btn.Font = Enum.Font.GothamMedium
+    btn.Text = "  " .. menuName
+    btn.TextColor3 = (i == 1) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 160, 175)
+    btn.TextSize = 9
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.ZIndex = 2
+    
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 4)
+    c.Parent = btn
+    
+    sidebarButtons[menuName] = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        for name, b in pairs(sidebarButtons) do
+            if name == menuName then
+                TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(28, 28, 35), TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            else
+                TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 25), TextColor3 = Color3.fromRGB(160, 160, 175)}):Play()
+            end
+        end
+        for name, page in pairs(ContentPages) do
+            if name == menuName then
+                page.Visible = true
+                page.Position = UDim2.new(0, 130, 0, 12)
+                TweenService:Create(page, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                    Position = UDim2.new(0, 115, 0, 12)
+                }):Play()
+            else
+                page.Visible = false
+            end
+        end
+    end)
+end
+
+local function createBox(parent, x, y, width, height, title)
+    local Box = Instance.new("Frame")
+    Box.Parent = parent
+    Box.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+    Box.BackgroundTransparency = 0.2
+    Box.Position = UDim2.new(0, x, 0, y)
+    Box.Size = UDim2.new(0, width, 0, height)
+    Box.ZIndex = 2
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 5)
+    Corner.Parent = Box
+    
+    local Title = Instance.new("TextLabel")
+    Title.Parent = Box
+    Title.BackgroundTransparency = 1
+    Title.Position = UDim2.new(0, 8, 0, 6)
+    Title.Size = UDim2.new(0, width - 16, 0, 14)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = title
+    Title.TextColor3 = Color3.fromRGB(200, 200, 210)
+    Title.TextSize = 9
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.ZIndex = 2
+    
+    local Line = Instance.new("Frame")
+    Line.Parent = Box
+    Line.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    Line.BorderSizePixel = 0
+    Line.Position = UDim2.new(0, 8, 0, 22)
+    Line.Size = UDim2.new(0, width - 16, 0, 1)
+    Line.ZIndex = 2
+    
+    return Box
+end
+
+local function addToggle(box, text, yPos, defaultState, callback)
+    local Row = Instance.new("TextButton")
+    Row.Parent = box
+    Row.BackgroundTransparency = 1
+    Row.Position = UDim2.new(0, 8, 0, yPos)
+    Row.Size = UDim2.new(0, box.AbsoluteSize.X - 16, 0, 18)
+    Row.Font = Enum.Font.Gotham
+    Row.Text = text
+    Row.TextColor3 = Color3.fromRGB(200, 200, 210)
+    Row.TextSize = 9
+    Row.TextXAlignment = Enum.TextXAlignment.Left
+    Row.ZIndex = 2
+    
+    local chk = Instance.new("Frame")
+    chk.Parent = Row
+    chk.BackgroundColor3 = defaultState and Color3.fromRGB(130, 105, 255) or Color3.fromRGB(28, 28, 35)
+    chk.Position = UDim2.new(1, -12, 0, 2)
+    chk.Size = UDim2.new(0, 10, 0, 10)
+    chk.ZIndex = 2
+    local chc = Instance.new("UICorner")
+    chc.CornerRadius = UDim.new(0, 2)
+    chc.Parent = chk
+    
+    local enabled = defaultState
+    Row.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        local targetColor = enabled and Color3.fromRGB(130, 105, 255) or Color3.fromRGB(28, 28, 35)
+        TweenService:Create(chk, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+        if callback then callback(enabled) end
+    end)
+end
+
+-- ==========================================
+-- หน้า Home
+-- ==========================================
+local hb1 = createBox(homePage, 0, 0, 185, 110, "Status")
+local statusPlayer = Instance.new("TextLabel")
+statusPlayer.Parent = hb1
+statusPlayer.BackgroundTransparency = 1
+statusPlayer.Position = UDim2.new(0, 8, 0, 28)
+statusPlayer.Size = UDim2.new(0, 169, 0, 16)
+statusPlayer.Font = Enum.Font.Gotham
+statusPlayer.Text = "Name: " .. player.Name
+statusPlayer.TextColor3 = Color3.fromRGB(170, 170, 185)
+statusPlayer.TextSize = 9
+statusPlayer.TextXAlignment = Enum.TextXAlignment.Left
+statusPlayer.ZIndex = 2
+
+local statusHealth = Instance.new("TextLabel")
+statusHealth.Parent = hb1
+statusHealth.BackgroundTransparency = 1
+statusHealth.Position = UDim2.new(0, 8, 0, 48)
+statusHealth.Size = UDim2.new(0, 169, 0, 16)
+statusHealth.Font = Enum.Font.Gotham
+statusHealth.Text = "HP: Checking..."
+statusHealth.TextColor3 = Color3.fromRGB(170, 170, 185)
+statusHealth.TextSize = 9
+statusHealth.TextXAlignment = Enum.TextXAlignment.Left
+statusHealth.ZIndex = 2
+
+local statusUptime = Instance.new("TextLabel")
+statusUptime.Parent = hb1
+statusUptime.BackgroundTransparency = 1
+statusUptime.Position = UDim2.new(0, 8, 0, 68)
+statusUptime.Size = UDim2.new(0, 169, 0, 16)
+statusUptime.Font = Enum.Font.Gotham
+statusUptime.Text = "Time: 00:00"
+statusUptime.TextColor3 = Color3.fromRGB(170, 170, 185)
+statusUptime.TextSize = 9
+statusUptime.TextXAlignment = Enum.TextXAlignment.Left
+statusUptime.ZIndex = 2
+
+local hb2 = createBox(homePage, 195, 0, 185, 110, "Farm Info")
+local statusFarmState = Instance.new("TextLabel")
+statusFarmState.Parent = hb2
+statusFarmState.BackgroundTransparency = 1
+statusFarmState.Position = UDim2.new(0, 8, 0, 28)
+statusFarmState.Size = UDim2.new(0, 169, 0, 16)
+statusFarmState.Font = Enum.Font.Gotham
+statusFarmState.Text = "Farm: OFF"
+statusFarmState.TextColor3 = Color3.fromRGB(255, 90, 90)
+statusFarmState.TextSize = 9
+statusFarmState.TextXAlignment = Enum.TextXAlignment.Left
+statusFarmState.ZIndex = 2
+
+local statusTarget = Instance.new("TextLabel")
+statusTarget.Parent = hb2
+statusTarget.BackgroundTransparency = 1
+statusTarget.Position = UDim2.new(0, 8, 0, 48)
+statusTarget.Size = UDim2.new(0, 169, 0, 16)
+statusTarget.Font = Enum.Font.Gotham
+statusTarget.Text = "Target: None"
+statusTarget.TextColor3 = Color3.fromRGB(170, 170, 185)
+statusTarget.TextSize = 9
+statusTarget.TextXAlignment = Enum.TextXAlignment.Left
+statusTarget.ZIndex = 2
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        pcall(function()
+            local char = player.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    statusHealth.Text = string.format("HP: %d / %d", math.floor(hum.Health), math.floor(hum.MaxHealth))
+                end
+            end
+            
+            local elapsed = math.floor(tick() - startTime)
+            local mins = math.floor(elapsed / 60)
+            local secs = elapsed % 60
+            statusUptime.Text = string.format("Time: %02d:%02d", mins, secs)
+            
+            if _G.MagicAlayMiniFarm.Active then
+                statusFarmState.Text = "Farm: ACTIVE"
+                statusFarmState.TextColor3 = Color3.fromRGB(100, 255, 100)
+            else
+                statusFarmState.Text = "Farm: OFF"
+                statusFarmState.TextColor3 = Color3.fromRGB(255, 90, 90)
+            end
+            
+            if currentTarget and currentTarget.Parent then
+                statusTarget.Text = "Target: " .. currentTarget.Name
+            else
+                statusTarget.Text = "Target: Searching..."
+            end
+        end)
+    end
+end)
+
+-- หน้า Combat
+local cb1 = createBox(combatPage, 0, 0, 185, 140, "Combat")
+addToggle(cb1, "Auto Farm", 28, false, function(v)
+    _G.MagicAlayMiniFarm.Active = v
+    groundSpot = nil
+    print("MagicAlay Smart AI Farm:", v and "ON" or "OFF")
+end)
+addToggle(cb1, "Auto Buy Sword", 50, true, function(v)
+    _G.MagicAlayAutoBuySword = v
+    print("MagicAlay Auto Buy Sword:", v and "ON" or "OFF")
+end)
+addToggle(cb1, "Auto Claim Quest", 72, true, function(v)
+    _G.MagicAlayAutoClaimQuest = v
+    print("MagicAlay Auto Claim Quest:", v and "ON" or "OFF")
+end)
+addToggle(cb1, "AFK Mode", 94, true, function(v)
+    _G.MagicAlayAFK.Active = v
+    print("MagicAlay AFK Mode:", v and "ON" or "OFF")
+end)
+
+-- หน้า Settings
+local setb1 = createBox(settingsPage, 0, 0, 185, 130, "Performance")
+addToggle(setb1, "Safe Attack", 28, true, function(v)
+    _G.MagicAlaySettings.FastAttack = v
+    attackSpeed = v and 0.14 or 0.22
+    print("Safe Attack Mode:", v)
+end)
+addToggle(setb1, "Anti-Fling", 50, true, function(v)
+    _G.MagicAlaySettings.AntiFling = v
+    print("Anti-Fling:", v)
+end)
+
+local setb2 = createBox(settingsPage, 195, 0, 185, 130, "Utility")
+local ResetBtn = Instance.new("TextButton")
+ResetBtn.Parent = setb2
+ResetBtn.BackgroundColor3 = Color3.fromRGB(35, 30, 45)
+ResetBtn.Position = UDim2.new(0, 8, 0, 28)
+ResetBtn.Size = UDim2.new(0, 169, 0, 24)
+ResetBtn.Font = Enum.Font.GothamBold
+ResetBtn.Text = "Reset Character"
+ResetBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+ResetBtn.TextSize = 9
+ResetBtn.ZIndex = 2
+
+local rc = Instance.new("UICorner")
+rc.CornerRadius = UDim.new(0, 4)
+rc.Parent = ResetBtn
+
+ResetBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            player.Character:FindFirstChildOfClass("Humanoid").Health = 0
+        end
+    end)
+end)
+
+
+-- ==========================================
+-- 2. ระบบป้องกันการหลุดจากการ AFK และกันเตะ (Anti-AFK / Anti-Kick) แบบเข้มข้น
+-- ==========================================
+player.Idled:Connect(function()
+    if _G.MagicAlayAFK and _G.MagicAlayAFK.Active then
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0,0))
+            VirtualUser:Button1Down(Vector2.new(0,0))
+            task.wait(0.1)
+            VirtualUser:Button1Up(Vector2.new(0,0))
+        end)
+    end
+end)
+
+-- ระบบเสริมดักจับ Error / Prompt / การเด้งหลุดออกจากห้อง
+task.spawn(function()
+    while true do
+        task.wait(5)
+        pcall(function()
+            if _G.MagicAlayAFK and _G.MagicAlayAFK.Active then
+                -- จำลองการขยับกล้องเบาๆ เพื่อส่งสัญญาณว่าผู้เล่นยังแอคทีฟอยู่เสมอ
+                VirtualUser:CaptureController()
+                VirtualUser:MoveMouse(Vector2.new(math.random(-5, 5), math.random(-5, 5)))
+            end
+        end)
+    end
+end)
+
+
+-- ==========================================
+-- 3. ระบบ AI ประชิดตัว (ล็อกตัวให้อยู่กับที่ ไม่ตกแมพ ไม่ลอยค้าง)
+-- ==========================================
+RunService.RenderStepped:Connect(function(deltaTime)
+    pcall(function()
+        local character = player.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = character.HumanoidRootPart
+        local hum = character:FindFirstChildOfClass("Humanoid")
+
+        -- จัดการเมื่อตัวละครตายจริง
+        if hum and hum.Health <= 0 then
+            hum.PlatformStand = true
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.RotVelocity = Vector3.new(0, 0, 0)
+            return
+        end
+
+        if _G.MagicAlayMiniFarm.Active then
+            if not groundSpot or not character:IsDescendantOf(Workspace) then
+                groundSpot = Vector3.new(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+                currentTarget = nil
+                return
+            end
+
+            -- ค้นหาเป้าหมายเฉพาะข้างในโฟลเดอร์ Monsters เท่านั้น
+            if not currentTarget or not currentTarget.Parent or not currentTarget:FindFirstChild("Humanoid") or currentTarget.Humanoid.Health <= 0 then
+                local shortestDist = math.huge
+                currentTarget = nil
+                
+                local targetFolder = Workspace:FindFirstChild(TARGET_FOLDER_NAME)
+                if targetFolder then
+                    for _, obj in pairs(targetFolder:GetDescendants()) do
+                        local data = getEnemyData(obj)
+                        if data then
+                            local distToSpot = (data.HRP.Position - groundSpot).Magnitude
+                            if distToSpot <= maxScanDist then
+                                if distToSpot < shortestDist then
+                                    shortestDist = distToSpot
+                                    currentTarget = data.Model
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+
+            -- ถ้ามอนสเตอร์หมด: ล็อกตัวให้อยู่กับที่ตรงจุด groundSpot ทันที (ไม่ตกแมพ/ไม่ลอยค้าง)
+            if not currentTarget then
+                hrp.CFrame = CFrame.new(groundSpot)
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.RotVelocity = Vector3.new(0, 0, 0)
+                return
+            end
+
+            local nearestEnemyPos = nil
+            local minEnemyDist = math.huge
+            local targetFolder = Workspace:FindFirstChild(TARGET_FOLDER_NAME)
+            if targetFolder then
+                for _, obj in pairs(targetFolder:GetDescendants()) do
+                    local data = getEnemyData(obj)
+                    if data then
+                        local dist = (data.HRP.Position - hrp.Position).Magnitude
+                        if dist < 10 and dist < minEnemyDist then
+                            minEnemyDist = dist
+                            nearestEnemyPos = data.HRP.Position
+                        end
+                    end
+                end
+            end
+
+            if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
+                local tHrp = currentTarget.HumanoidRootPart
+                local tHum = currentTarget:FindFirstChildOfClass("Humanoid")
+                local targetGroundY = tHrp.Position.Y + 0.5
+                
+                local enemyVel = tHrp.AssemblyLinearVelocity or Vector3.new(0, 0, 0)
+                local predictedPos = tHrp.Position + (enemyVel * 0.12)
+                
+                dodgeTimer = dodgeTimer + (deltaTime * 1.5)
+                if dodgeTimer > 1.8 then
+                    dodgeTimer = 0
+                    dodgeDirection = dodgeDirection * -1
+                end
+
+                local isBoss = tHum and (tHum.MaxHealth > 1000 or currentTarget.Name:lower():find("boss"))
+                local enemyRight = tHrp.CFrame.RightVector
+                local enemyLook = tHrp.CFrame.LookVector
+                
+                local targetCFrame
+
+                if nearestEnemyPos then
+                    local escapeDir = (hrp.Position - nearestEnemyPos).Unit
+                    local escapePos = hrp.Position + (escapeDir * 12) + (enemyRight * (5 * dodgeDirection))
+                    local finalPos = Vector3.new(escapePos.X, targetGroundY, escapePos.Z)
+                    targetCFrame = CFrame.new(finalPos, predictedPos)
+                else
+                    local isDudging = (dodgeTimer > 1.0)
+                    
+                    if isDudging then
+                        local orbitDist = isBoss and 16 or 9
+                        local orbitVector = (-enemyLook * orbitDist) + (enemyRight * (6 * dodgeDirection))
+                        local orbitPos = Vector3.new(predictedPos.X, targetGroundY, predictedPos.Z) + orbitVector
+                        targetCFrame = CFrame.new(orbitPos, predictedPos)
+                    else
+                        local attackDist = isBoss and 8.0 or 4.5
+                        local attackVector = (-enemyLook * attackDist) + (enemyRight * (1.2 * dodgeDirection))
+                        local attackPos = Vector3.new(predictedPos.X, targetGroundY, predictedPos.Z) + attackVector
+                        targetCFrame = CFrame.new(attackPos, predictedPos)
+                    end
+                end
+
+                local smoothness = math.clamp(deltaTime * 12, 0.1, 0.25)
+                hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, smoothness)
+            else
+                local idleAngle = tick() * 1.5
+                local idleOffset = Vector3.new(math.cos(idleAngle) * 4, 0, math.sin(idleAngle) * 4)
+                local stayPos = Vector3.new(groundSpot.X, groundSpot.Y, groundSpot.Z) + idleOffset
+                local idleCFrame = CFrame.new(stayPos, groundSpot)
+                
+                hrp.CFrame = hrp.CFrame:Lerp(idleCFrame, 0.1)
+            end
+
+            if _G.MagicAlaySettings.AntiFling then
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.RotVelocity = Vector3.new(0, 0, 0)
+            end
+        else
+            groundSpot = nil
+        end
+    end)
+end)
+
+
+-- ==========================================
+-- 4. ระบบตีปกติ (จำลองคลิกตี + ยิงรีโมท Swing 2 รูปแบบ)
+-- ==========================================
+task.spawn(function()
+    while true do
+        if not _G.MagicAlayMiniFarm.Active or not currentTarget then
+            task.wait(0.5)
+        else
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new(0,0))
+            end)
+
+            if swingRemote then
+                pcall(function()
+                    swingRemote:FireServer(table.unpack({
+                        [1] = 0.2,
+                        n = 1
+                    }, 1, 1))
+                end)
+                
+                task.wait(attackSpeed)
+
+                pcall(function()
+                    swingRemote:FireServer(table.unpack({
+                        [1] = 0.1,
+                        n = 1
+                    }, 1, 1))
+                end)
+                
+                task.wait(attackSpeed)
+            else
+                task.wait(0.5)
+            end
+        end
+    end
+end)
+
+
+-- ==========================================
+-- 5. ระบบ Auto Buy ดาบ และ Auto Claim ภารกิจ
+-- ==========================================
+task.spawn(function()
+    while true do
+        task.wait(1)
+        
+        -- ระบบ Auto Buy ดาบ
+        pcall(function()
+            if _G.MagicAlayAutoBuySword then
+                local btn = game.Players.LocalPlayer.PlayerGui:FindFirstChild("NextWeaponPopup")
+                    and game.Players.LocalPlayer.PlayerGui.NextWeaponPopup:FindFirstChild("NextWeaponSlot")
+                    and game.Players.LocalPlayer.PlayerGui.NextWeaponPopup.NextWeaponSlot:FindFirstChild("ImageLabel")
+                    and game.Players.LocalPlayer.PlayerGui.NextWeaponPopup.NextWeaponSlot.ImageLabel:FindFirstChild("Purchase")
+                    and game.Players.LocalPlayer.PlayerGui.NextWeaponPopup.NextWeaponSlot.ImageLabel.Purchase:FindFirstChild("ImageLabel")
+                
+                if btn and (btn.Visible or btn.AbsoluteSize.X > 0) then
+                    for _, conn in pairs(getconnections(btn.MouseButton1Click)) do conn:Fire() end
+                    for _, conn in pairs(getconnections(btn.MouseButton1Down)) do conn:Fire() end
+                    for _, conn in pairs(getconnections(btn.Activated)) do conn:Fire() end
+                end
+            end
+        end)
+
+        -- ระบบ Auto Claim ภารกิจ (สแกนกดทุกอันบนหน้าจอ)
+        pcall(function()
+            if _G.MagicAlayAutoClaimQuest then
+                local playerGui = player:FindFirstChild("PlayerGui")
+                if playerGui then
+                    local questTab = playerGui:FindFirstChild("QuestTab")
+                    if questTab then
+                        local scrollingFrame = questTab:FindFirstChild("QuestHolder")
+                            and questTab.QuestHolder:FindFirstChild("ScrollHolder")
+                            and questTab.QuestHolder.ScrollHolder:FindFirstChild("ScrollingFrame")
+                        
+                        if scrollingFrame then
+                            for _, child in pairs(scrollingFrame:GetChildren()) do
+                                if child:IsA("Frame") or child:IsA("ImageLabel") or child:IsA("ScrollingFrame") then
+                                    local claimBtn = child:FindFirstChild("ClaimButton")
+                                    if claimBtn and (claimBtn.Visible or claimBtn.AbsoluteSize.X > 0) then
+                                        for _, conn in pairs(getconnections(claimBtn.MouseButton1Click)) do conn:Fire() end
+                                        for _, conn in pairs(getconnections(claimBtn.MouseButton1Down)) do conn:Fire() end
+                                        for _, conn in pairs(getconnections(claimBtn.Activated)) do conn:Fire() end
+                                    end
+                                end
+                            end
+                            local defaultQuest = scrollingFrame:FindFirstChild("Quest")
+                            if defaultQuest then
+                                local claimBtn = defaultQuest:FindFirstChild("ClaimButton")
+                                if claimBtn and (claimBtn.Visible or claimBtn.AbsoluteSize.X > 0) then
+                                    for _, conn in pairs(getconnections(claimBtn.MouseButton1Click)) do conn:Fire() end
+                                    for _, conn in pairs(getconnections(claimBtn.MouseButton1Down)) do conn:Fire() end
+                                    for _, conn in pairs(getconnections(claimBtn.Activated)) do conn:Fire() end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+print("MagicAlay Ultimate Super-Attack AI (Anti-AFK Enhanced) Loaded Successfully!")
